@@ -1,0 +1,25 @@
+# QuantConnect
+config.json
+backtests/
+live/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# LEAN outputs
+.lean/
