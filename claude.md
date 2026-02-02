@@ -166,3 +166,77 @@ source ~/Documents/QuantConnect/venv/bin/activate
 
 ### Data not available locally
 Use cloud backtest instead of local - cloud has full data access.
+
+## Git Version Control
+
+### Repository Information
+- **GitHub URL:** https://github.com/WolfpackOfOne/WolfpackTrend.git
+- **Repository Name:** WolfpackTrend
+- **Default Branch:** main
+- **Working Directory:** `/Users/graham/Documents/QuantConnect/MyProjects/WolfpackTrend 1`
+
+### Files Tracked in Git
+- `main.py` - Main algorithm
+- `models/*.py` - Alpha, portfolio, logger, universe modules
+- `claude.md` - This documentation
+- `.gitignore` - Ignore patterns
+
+### Files NOT Tracked (in .gitignore)
+- `config.json` - Contains QC organization/cloud IDs
+- `backtests/` - Backtest results (regeneratable)
+- `__pycache__/` - Python cache
+- `.DS_Store` - macOS metadata
+
+### Common Git Commands
+```bash
+# Check status
+git status
+
+# View recent commits
+git log --oneline -10
+
+# Stage and commit changes
+git add .
+git commit -m "Description of changes"
+
+# Push to GitHub
+git push
+
+# Pull from GitHub
+git pull
+```
+
+### Development Workflow
+```bash
+# 1. Pull latest from GitHub
+cd "/Users/graham/Documents/QuantConnect/MyProjects/WolfpackTrend 1"
+git pull
+
+# 2. Make changes to algorithm
+
+# 3. Test with QuantConnect cloud
+cd ~/Documents/QuantConnect
+source venv/bin/activate
+cd MyProjects
+lean cloud push --project "WolfpackTrend 1" --force
+lean cloud backtest "WolfpackTrend 1" --name "Test"
+
+# 4. Commit if successful
+cd "WolfpackTrend 1"
+git add .
+git commit -m "Describe your changes"
+git push
+
+# 5. Sync to QC cloud (already done in step 3)
+```
+
+### Syncing Between Systems
+Three separate systems to keep in sync:
+
+| System | Location | Sync Command |
+|--------|----------|--------------|
+| Local Git | `.git/` | `git push` / `git pull` |
+| GitHub | WolfpackOfOne/WolfpackTrend | (via git) |
+| QC Cloud | WolfpackTrend 1 project | `lean cloud push/pull` |
+
+**Important:** Git and QC cloud are independent. Sync both if you want changes everywhere.
