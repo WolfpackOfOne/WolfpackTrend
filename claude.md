@@ -1,5 +1,9 @@
 # WolfpackTrend - Dow 30 Trend-Following Strategy
 
+## Repository
+- **GitHub URL:** https://github.com/WolfpackOfOne/WolfpackTrend.git
+- **Default Branch:** main
+
 ## Project Overview
 
 A modular trend-following strategy using the Dow 30 stocks, implemented with LEAN's framework architecture:
