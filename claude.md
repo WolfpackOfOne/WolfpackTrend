@@ -142,7 +142,7 @@ df_slippage = pd.read_csv(StringIO(slippage_str), parse_dates=['date'])
 - `daily_unrealized_pnl` - Daily unrealized P&L delta
 - `daily_realized_pnl` - Daily realized P&L delta (from `holding.Profit`)
 - `daily_fees` - Daily fees delta (from `holding.TotalFees`)
-- `daily_dividends` - Daily dividends delta (from `holding.TotalDividends`)
+- `daily_dividends` - Daily dividends delta (informational under Adjusted pricing; do not subtract from NAV reconciliation)
 - `daily_total_net_pnl` - Daily realized + unrealized − fees
 - `avg_price` - Average entry price
 

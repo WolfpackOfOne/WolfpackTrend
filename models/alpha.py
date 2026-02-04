@@ -10,11 +10,13 @@ class CompositeTrendAlphaModel(AlphaModel):
     from moving averages, normalized by ATR.
     """
 
-    def __init__(self, short_period=20, medium_period=63, long_period=252, atr_period=14, logger=None, algorithm=None):
+    def __init__(self, short_period=20, medium_period=63, long_period=252,
+                 atr_period=14, rebalance_interval_days=1, logger=None, algorithm=None):
         self.short_period = short_period
         self.medium_period = medium_period
         self.long_period = long_period
         self.atr_period = atr_period
+        self.rebalance_interval_days = max(1, int(rebalance_interval_days))
 
         # Weights for composite score
         self.weight_short = 0.5
@@ -30,7 +32,7 @@ class CompositeTrendAlphaModel(AlphaModel):
         self.sma_long = {}
         self.atr = {}
 
-        # Track last emit date to emit at most once per day
+        # Track last emit date to control rebalance frequency
         self.last_emit_date = None
 
         # Optional logger for signal tracking
@@ -42,10 +44,12 @@ class CompositeTrendAlphaModel(AlphaModel):
     def Update(self, algorithm, data):
         insights = []
 
-        # Only emit once per day
+        # Only emit once per rebalance interval
         current_date = algorithm.Time.date()
-        if self.last_emit_date == current_date:
-            return insights
+        if self.last_emit_date is not None:
+            days_since = (current_date - self.last_emit_date).days
+            if days_since < self.rebalance_interval_days:
+                return insights
         self.last_emit_date = current_date
 
         for symbol in self.sma_short.keys():
@@ -95,7 +99,7 @@ class CompositeTrendAlphaModel(AlphaModel):
             # Emit insight with weight and confidence = abs(mag)
             insight = Insight.Price(
                 symbol,
-                timedelta(days=1),
+                timedelta(days=self.rebalance_interval_days),
                 direction,
                 None,  # magnitude (optional, not used here)
                 abs(mag),  # confidence

@@ -32,6 +32,19 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         # Initialize logger for portfolio tracking
         self.logger = PortfolioLogger()
 
+        # Clear ObjectStore to remove stale files from previous runs
+        if self.ObjectStore.ContainsKey("wolfpack/daily_snapshots.csv"):
+            self.ObjectStore.Delete("wolfpack/daily_snapshots.csv")
+        if self.ObjectStore.ContainsKey("wolfpack/positions.csv"):
+            self.ObjectStore.Delete("wolfpack/positions.csv")
+        if self.ObjectStore.ContainsKey("wolfpack/trades.csv"):
+            self.ObjectStore.Delete("wolfpack/trades.csv")
+        if self.ObjectStore.ContainsKey("wolfpack/signals.csv"):
+            self.ObjectStore.Delete("wolfpack/signals.csv")
+        if self.ObjectStore.ContainsKey("wolfpack/slippage.csv"):
+            self.ObjectStore.Delete("wolfpack/slippage.csv")
+        self.Debug("ObjectStore: Cleared previous wolfpack data files")
+
         # Log initialization
         self.Debug("=" * 60)
         self.Debug("WOLFPACK TREND STRATEGY INITIALIZED")
@@ -46,10 +59,11 @@ class Dow30TrendAlgorithm(QCAlgorithm):
             medium_period=63,
             long_period=252,
             atr_period=14,
+            rebalance_interval_days=7,
             logger=self.logger,
             algorithm=self
         ))
-        self.Debug("Alpha: Composite Trend (SMA 20/63/252, ATR 14)")
+        self.Debug("Alpha: Composite Trend (SMA 20/63/252, ATR 14, weekly rebalance)")
 
         # Store reference to portfolio construction model for UpdateReturns
         self.pcm = TargetVolPortfolioConstructionModel(
