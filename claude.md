@@ -129,6 +129,23 @@ df_slippage = pd.read_csv(StringIO(slippage_str), parse_dates=['date'])
 - `num_positions` - Count of active positions
 - `estimated_vol` - Portfolio volatility estimate
 
+### Positions Columns
+- `date` - Trading date
+- `symbol` - Ticker symbol
+- `invested` - 1 if invested, 0 if flat
+- `quantity` - Position quantity
+- `price` - Last price
+- `market_value` - Quantity * price
+- `weight` - Market value / NAV
+- `unrealized_pnl` - Current unrealized P&L
+- `daily_pnl` - Daily unrealized P&L delta (legacy)
+- `daily_unrealized_pnl` - Daily unrealized P&L delta
+- `daily_realized_pnl` - Daily realized P&L delta (from `holding.Profit`)
+- `daily_fees` - Daily fees delta (from `holding.TotalFees`)
+- `daily_dividends` - Daily dividends delta (from `holding.TotalDividends`)
+- `daily_total_net_pnl` - Daily realized + unrealized − fees
+- `avg_price` - Average entry price
+
 ## Backtest Configuration
 
 Current settings in `main.py`:

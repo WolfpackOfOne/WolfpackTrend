@@ -11,7 +11,7 @@ class TargetVolPortfolioConstructionModel(PortfolioConstructionModel):
     """
 
     def __init__(self, target_vol_annual=0.10, max_gross=1.50, max_net=0.50,
-                 max_weight=0.10, vol_lookback=63):
+                 max_weight=0.10, vol_lookback=63, algorithm=None):
         self.target_vol_annual = target_vol_annual
         self.max_gross = max_gross
         self.max_net = max_net
@@ -30,6 +30,9 @@ class TargetVolPortfolioConstructionModel(PortfolioConstructionModel):
 
         # Expected prices at target generation (for slippage tracking)
         self.expected_prices = {}
+
+        # Algorithm reference for Debug logging
+        self.algorithm = algorithm
 
     def UpdateReturns(self, algorithm, data):
         """
@@ -102,12 +105,27 @@ class TargetVolPortfolioConstructionModel(PortfolioConstructionModel):
             targets.append(PortfolioTarget.Percent(algorithm, symbol, weight))
 
         # Zero out positions not in current insights
+        exits = []
         for symbol in self.symbols:
             if symbol not in weights:
                 targets.append(PortfolioTarget.Percent(algorithm, symbol, 0))
+                exits.append(symbol)
                 # Also store expected price for exits
                 if symbol in algorithm.Securities:
                     self.expected_prices[symbol] = algorithm.Securities[symbol].Price
+
+        # Log portfolio construction summary
+        if self.algorithm:
+            gross = sum(abs(w) for w in weights.values())
+            net = sum(weights.values())
+            long_exp = sum(w for w in weights.values() if w > 0)
+            short_exp = sum(abs(w) for w in weights.values() if w < 0)
+            vol_str = f"{vol_annual*100:.1f}%" if vol_annual else "N/A"
+            self.algorithm.Debug(
+                f"[{algorithm.Time.strftime('%Y-%m-%d')}] PCM: "
+                f"Vol={vol_str}, Gross={gross*100:.0f}%, Net={net*100:+.0f}%, "
+                f"L/S={long_exp*100:.0f}%/{short_exp*100:.0f}%"
+            )
 
         return targets
 

@@ -32,14 +32,24 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         # Initialize logger for portfolio tracking
         self.logger = PortfolioLogger()
 
+        # Log initialization
+        self.Debug("=" * 60)
+        self.Debug("WOLFPACK TREND STRATEGY INITIALIZED")
+        self.Debug(f"Period: {self.StartDate.strftime('%Y-%m-%d')} to {self.EndDate.strftime('%Y-%m-%d')}")
+        self.Debug(f"Starting Cash: ${self.Portfolio.Cash:,.0f}")
+        self.Debug(f"Universe: {len(DOW30)} Dow 30 stocks")
+        self.Debug("=" * 60)
+
         # Set up framework models (pass logger to alpha for signal tracking)
         self.SetAlpha(CompositeTrendAlphaModel(
             short_period=20,
             medium_period=63,
             long_period=252,
             atr_period=14,
-            logger=self.logger
+            logger=self.logger,
+            algorithm=self
         ))
+        self.Debug("Alpha: Composite Trend (SMA 20/63/252, ATR 14)")
 
         # Store reference to portfolio construction model for UpdateReturns
         self.pcm = TargetVolPortfolioConstructionModel(
@@ -47,9 +57,11 @@ class Dow30TrendAlgorithm(QCAlgorithm):
             max_gross=1.50,
             max_net=0.50,
             max_weight=0.10,
-            vol_lookback=63
+            vol_lookback=63,
+            algorithm=self
         )
         self.SetPortfolioConstruction(self.pcm)
+        self.Debug(f"PCM: Target Vol 10%, Max Gross 150%, Max Net 50%, Max Weight 10%")
 
         # Immediate execution (market orders)
         self.SetExecution(ImmediateExecutionModel())
@@ -63,7 +75,7 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         self.pcm.UpdateReturns(self, data)
 
         # Log daily portfolio metrics
-        self.logger.log_daily(self, self.pcm)
+        self.logger.log_daily(self, self.pcm, data)
 
     def OnOrderEvent(self, orderEvent):
         """Track slippage by comparing fill price to expected price at signal generation."""
@@ -80,6 +92,10 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         # Determine direction
         direction = "Buy" if quantity > 0 else "Sell"
 
+        # Log the trade
+        fill_value = abs(quantity * fill_price)
+        self.Debug(f"  Trade: {direction} {abs(quantity)} {symbol.Value} @ ${fill_price:.2f} (${fill_value:,.0f})")
+
         self.logger.log_slippage(
             date=self.Time,
             symbol=symbol,
@@ -91,4 +107,15 @@ class Dow30TrendAlgorithm(QCAlgorithm):
 
     def OnEndOfAlgorithm(self):
         """Save all logged data to ObjectStore at end of backtest."""
+        # Log final summary
+        self.Debug("=" * 60)
+        self.Debug("BACKTEST COMPLETE")
+        nav = self.Portfolio.TotalPortfolioValue
+        starting = self.logger.starting_cash or 100000
+        total_return = (nav / starting - 1) * 100
+        self.Debug(f"Final NAV: ${nav:,.2f}")
+        self.Debug(f"Total Return: {total_return:+.2f}%")
+        self.Debug(f"Total Trades: {len(self.logger.slippage)}")
+        self.Debug("=" * 60)
+
         self.logger.save_to_objectstore(self)

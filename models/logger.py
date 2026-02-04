@@ -14,6 +14,7 @@ class PortfolioLogger:
         self.positions: List[Dict[str, Any]] = []
         self.signals: List[Dict[str, Any]] = []
         self.slippage: List[Dict[str, Any]] = []
+        self.trades: List[Dict[str, Any]] = []  # Track realized P&L from closes
 
         # Track previous NAV for daily P&L
         self.prev_nav: Optional[float] = None
@@ -22,8 +23,16 @@ class PortfolioLogger:
         # Daily slippage accumulator (reset each day)
         self.daily_slippage: float = 0.0
         self.last_slippage_date: Optional[datetime] = None
+        # Daily dividends accumulator (reset each day)
+        self.daily_dividends_by_symbol: Dict[str, float] = {}
+        self.last_dividends_date: Optional[datetime] = None
 
-    def log_daily(self, algorithm, pcm) -> None:
+        # Track previous day's positions for detecting closes
+        self.prev_positions: Dict[str, Dict[str, Any]] = {}  # symbol -> {qty, avg_price, unrealized}
+        # Track cumulative totals for daily delta calculations
+        self.prev_symbol_totals: Dict[str, Dict[str, float]] = {}  # symbol -> {profit, unrealized, fees, net, dividends}
+
+    def log_daily(self, algorithm, pcm, data=None) -> None:
         """
         Log daily portfolio snapshot. Call from OnData().
         """
@@ -72,6 +81,27 @@ class PortfolioLogger:
             self.daily_slippage = 0.0
             self.last_slippage_date = current_date
 
+        # Reset daily dividends accumulator if new day
+        if self.last_dividends_date != current_date:
+            self.daily_dividends_by_symbol = {}
+            self.last_dividends_date = current_date
+
+        # Capture dividends from Slice if provided
+        if data is not None and hasattr(data, 'Dividends'):
+            for dividend in data.Dividends.Values:
+                if dividend is None:
+                    continue
+                symbol = dividend.Symbol
+                if symbol not in algorithm.Securities:
+                    continue
+                quantity = algorithm.Portfolio[symbol].Quantity
+                if quantity == 0:
+                    continue
+                conversion_rate = algorithm.Securities[symbol].QuoteCurrency.ConversionRate
+                amount = float(quantity) * float(dividend.Distribution) * float(conversion_rate)
+                sym_str = str(symbol.Value)
+                self.daily_dividends_by_symbol[sym_str] = self.daily_dividends_by_symbol.get(sym_str, 0.0) + amount
+
         # Estimate portfolio volatility from PCM if available
         estimated_vol = None
         if hasattr(pcm, '_estimate_portfolio_vol') and hasattr(pcm, 'symbols'):
@@ -103,23 +133,118 @@ class PortfolioLogger:
         self._log_positions(algorithm, current_date, nav)
 
     def _log_positions(self, algorithm, current_date, nav: float) -> None:
-        """Log all current positions."""
+        """Log all current positions and detect closed positions."""
+        current_symbols = set()
+
         for symbol, holding in algorithm.Portfolio.items():
-            if not holding.Invested:
+            sym_str = str(symbol.Value)
+            invested = holding.Invested
+            if invested:
+                current_symbols.add(sym_str)
+
+            # Calculate daily deltas from cumulative totals (realized, unrealized, fees)
+            profit = float(holding.Profit)
+            unrealized = float(holding.UnrealizedProfit)
+            fees = float(holding.TotalFees)
+            dividends = float(holding.TotalDividends)
+            net_total = profit + unrealized - fees
+
+            prev_totals = self.prev_symbol_totals.get(sym_str, {
+                'profit': 0.0,
+                'unrealized': 0.0,
+                'fees': 0.0,
+                'net': 0.0,
+                'dividends': 0.0
+            })
+            daily_realized = profit - prev_totals['profit']
+            daily_unrealized = unrealized - prev_totals['unrealized']
+            daily_fees = fees - prev_totals['fees']
+            daily_total_net = net_total - prev_totals['net']
+            daily_dividends = self.daily_dividends_by_symbol.get(
+                sym_str, dividends - prev_totals['dividends']
+            )
+
+            # Only append a row if invested or there is P&L/fee activity
+            has_activity = any(
+                abs(x) > 1e-6 for x in (daily_realized, daily_unrealized, daily_fees, daily_total_net, daily_dividends)
+            )
+            if not invested and not has_activity:
+                self.prev_symbol_totals[sym_str] = {
+                    'profit': profit,
+                    'unrealized': unrealized,
+                    'fees': fees,
+                    'net': net_total,
+                    'dividends': dividends
+                }
                 continue
 
-            market_value = holding.Quantity * holding.Price
+            market_value = holding.Quantity * holding.Price if invested else 0.0
             weight = market_value / nav if nav > 0 else 0
+
+            # Get previous day's unrealized P&L for this symbol
+            prev_unrealized = 0.0
+            if sym_str in self.prev_positions:
+                prev_unrealized = self.prev_positions[sym_str].get('unrealized_pnl', 0.0)
+
+            # Daily P&L = change in unrealized P&L
+            # For new positions, this equals the current unrealized (P&L since entry)
+            daily_pnl = holding.UnrealizedProfit - prev_unrealized
 
             self.positions.append({
                 'date': current_date.strftime('%Y-%m-%d'),
-                'symbol': str(symbol.Value),
-                'quantity': holding.Quantity,
+                'symbol': sym_str,
+                'invested': int(invested),
+                'quantity': holding.Quantity if invested else 0,
+                'price': round(holding.Price, 2) if invested else 0.0,  # Current price for returns calc
                 'market_value': round(market_value, 2),
                 'weight': round(weight, 4),
-                'unrealized_pnl': round(holding.UnrealizedProfit, 2),
+                'unrealized_pnl': round(unrealized, 2),
+                'daily_pnl': round(daily_pnl, 2),  # Daily MTM P&L
+                'daily_unrealized_pnl': round(daily_unrealized, 2),
+                'daily_realized_pnl': round(daily_realized, 2),
+                'daily_fees': round(daily_fees, 2),
+                'daily_dividends': round(daily_dividends, 2),
+                'daily_total_net_pnl': round(daily_total_net, 2),
                 'avg_price': round(holding.AveragePrice, 2)
             })
+
+            # Update tracking for next day
+            if invested:
+                self.prev_positions[sym_str] = {
+                    'quantity': holding.Quantity,
+                    'avg_price': holding.AveragePrice,
+                    'unrealized_pnl': holding.UnrealizedProfit,
+                    'price': holding.Price
+                }
+
+            self.prev_symbol_totals[sym_str] = {
+                'profit': profit,
+                'unrealized': unrealized,
+                'fees': fees,
+                'net': net_total,
+                'dividends': dividends
+            }
+
+        # Detect closed positions (were held yesterday, not today)
+        for sym_str, prev_data in list(self.prev_positions.items()):
+            if sym_str not in current_symbols:
+                # Position was closed - log the realized P&L
+                # The realized P&L is approximately the last unrealized P&L
+                # (actual realized = sale proceeds - cost basis, but we approximate)
+                realized_pnl = prev_data.get('unrealized_pnl', 0.0)
+
+                self.trades.append({
+                    'date': current_date.strftime('%Y-%m-%d'),
+                    'symbol': sym_str,
+                    'action': 'CLOSE',
+                    'quantity': prev_data.get('quantity', 0),
+                    'avg_price': round(prev_data.get('avg_price', 0), 2),
+                    'exit_price': round(prev_data.get('price', 0), 2),
+                    'realized_pnl': round(realized_pnl, 2)
+                })
+
+                # Remove from tracking
+                del self.prev_positions[sym_str]
 
     def log_signal(self, date: datetime, symbol, direction: str, magnitude: float,
                    price: float, sma_short: float, sma_medium: float,
@@ -170,13 +295,22 @@ class PortfolioLogger:
             ])
             algorithm.ObjectStore.Save("wolfpack/daily_snapshots.csv", csv_content)
 
-        # Positions
+        # Positions (with daily P&L for attribution)
         if self.positions:
             csv_content = self._build_csv(self.positions, [
-                'date', 'symbol', 'quantity', 'market_value', 'weight',
-                'unrealized_pnl', 'avg_price'
+                'date', 'symbol', 'invested', 'quantity', 'price', 'market_value', 'weight',
+                'unrealized_pnl', 'daily_pnl', 'daily_unrealized_pnl', 'daily_realized_pnl',
+                'daily_fees', 'daily_dividends', 'daily_total_net_pnl', 'avg_price'
             ])
             algorithm.ObjectStore.Save("wolfpack/positions.csv", csv_content)
+
+        # Trades (realized P&L from closed positions)
+        if self.trades:
+            csv_content = self._build_csv(self.trades, [
+                'date', 'symbol', 'action', 'quantity', 'avg_price',
+                'exit_price', 'realized_pnl'
+            ])
+            algorithm.ObjectStore.Save("wolfpack/trades.csv", csv_content)
 
         # Signals
         if self.signals:
@@ -196,6 +330,7 @@ class PortfolioLogger:
 
         algorithm.Debug(f"ObjectStore: Saved {len(self.snapshots)} snapshots, "
                        f"{len(self.positions)} position records, "
+                       f"{len(self.trades)} trades, "
                        f"{len(self.signals)} signals, "
                        f"{len(self.slippage)} slippage records")
 

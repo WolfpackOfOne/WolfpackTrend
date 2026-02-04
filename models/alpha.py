@@ -10,7 +10,7 @@ class CompositeTrendAlphaModel(AlphaModel):
     from moving averages, normalized by ATR.
     """
 
-    def __init__(self, short_period=20, medium_period=63, long_period=252, atr_period=14, logger=None):
+    def __init__(self, short_period=20, medium_period=63, long_period=252, atr_period=14, logger=None, algorithm=None):
         self.short_period = short_period
         self.medium_period = medium_period
         self.long_period = long_period
@@ -35,6 +35,9 @@ class CompositeTrendAlphaModel(AlphaModel):
 
         # Optional logger for signal tracking
         self.logger = logger
+
+        # Algorithm reference for Debug logging
+        self.algorithm = algorithm
 
     def Update(self, algorithm, data):
         insights = []
@@ -115,6 +118,12 @@ class CompositeTrendAlphaModel(AlphaModel):
                     sma_long=sma_l,
                     atr=atr_value
                 )
+
+        # Log summary of signals
+        if insights and self.algorithm:
+            long_count = sum(1 for i in insights if i.Direction == InsightDirection.Up)
+            short_count = len(insights) - long_count
+            self.algorithm.Debug(f"[{algorithm.Time.strftime('%Y-%m-%d')}] Alpha: {len(insights)} signals ({long_count} long, {short_count} short)")
 
         return insights
 
