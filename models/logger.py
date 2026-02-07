@@ -15,6 +15,8 @@ class PortfolioLogger:
         self.signals: List[Dict[str, Any]] = []
         self.slippage: List[Dict[str, Any]] = []
         self.trades: List[Dict[str, Any]] = []  # Track realized P&L from closes
+        self.targets: List[Dict[str, Any]] = []  # Daily target-state tracking
+        self.order_events: List[Dict[str, Any]] = []  # Full order lifecycle events
 
         # Track previous NAV for daily P&L
         self.prev_nav: Optional[float] = None
@@ -131,6 +133,8 @@ class PortfolioLogger:
 
         # Log positions
         self._log_positions(algorithm, current_date, nav)
+        # Log daily target state snapshot
+        self._log_targets(algorithm, pcm, current_date)
 
     def _log_positions(self, algorithm, current_date, nav: float) -> None:
         """Log all current positions and detect closed positions."""
@@ -246,6 +250,28 @@ class PortfolioLogger:
                 # Remove from tracking
                 del self.prev_positions[sym_str]
 
+    def _log_targets(self, algorithm, pcm, current_date) -> None:
+        """Log per-symbol weekly target state for exact outstanding-order analytics."""
+        if pcm is None or not hasattr(pcm, 'get_daily_target_state'):
+            return
+
+        rows = pcm.get_daily_target_state(algorithm)
+        if not rows:
+            return
+
+        for row in rows:
+            self.targets.append({
+                'date': current_date.strftime('%Y-%m-%d'),
+                'week_id': row.get('week_id', ''),
+                'symbol': row.get('symbol', ''),
+                'start_w': row.get('start_w', ''),
+                'weekly_target_w': row.get('weekly_target_w', ''),
+                'scheduled_fraction': row.get('scheduled_fraction', ''),
+                'scheduled_w': row.get('scheduled_w', ''),
+                'actual_w': row.get('actual_w', ''),
+                'scale_day': row.get('scale_day', '')
+            })
+
     def log_signal(self, date: datetime, symbol, direction: str, magnitude: float,
                    price: float, sma_short: float, sma_medium: float,
                    sma_long: float, atr: float) -> None:
@@ -282,6 +308,26 @@ class PortfolioLogger:
             'expected_price': round(expected_price, 4),
             'fill_price': round(fill_price, 4),
             'slippage_dollars': round(slippage_dollars, 2)
+        })
+
+    def log_order_event(self, date: datetime, order_id: int, symbol,
+                        status: str, direction: str, quantity: float,
+                        fill_quantity: float, fill_price: float,
+                        order_type: str, limit_price: Optional[float] = None,
+                        tag: str = "") -> None:
+        """Log all order events (submitted, partially filled, filled, canceled, etc.)."""
+        self.order_events.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'order_id': order_id,
+            'symbol': str(symbol.Value) if hasattr(symbol, 'Value') else str(symbol),
+            'status': status,
+            'direction': direction,
+            'quantity': quantity,
+            'fill_quantity': fill_quantity,
+            'fill_price': round(fill_price, 4) if fill_price else '',
+            'order_type': order_type,
+            'limit_price': round(limit_price, 4) if limit_price is not None else '',
+            'tag': tag
         })
 
     def save_to_objectstore(self, algorithm) -> None:
@@ -328,11 +374,30 @@ class PortfolioLogger:
             ])
             algorithm.ObjectStore.Save("wolfpack/slippage.csv", csv_content)
 
+        # Daily target-state logs
+        if self.targets:
+            csv_content = self._build_csv(self.targets, [
+                'date', 'week_id', 'symbol', 'start_w', 'weekly_target_w',
+                'scheduled_fraction', 'scheduled_w', 'actual_w', 'scale_day'
+            ])
+            algorithm.ObjectStore.Save("wolfpack/targets.csv", csv_content)
+
+        # Full order lifecycle events
+        if self.order_events:
+            csv_content = self._build_csv(self.order_events, [
+                'date', 'order_id', 'symbol', 'status', 'direction',
+                'quantity', 'fill_quantity', 'fill_price',
+                'order_type', 'limit_price', 'tag'
+            ])
+            algorithm.ObjectStore.Save("wolfpack/order_events.csv", csv_content)
+
         algorithm.Debug(f"ObjectStore: Saved {len(self.snapshots)} snapshots, "
                        f"{len(self.positions)} position records, "
                        f"{len(self.trades)} trades, "
                        f"{len(self.signals)} signals, "
-                       f"{len(self.slippage)} slippage records")
+                       f"{len(self.slippage)} slippage records, "
+                       f"{len(self.targets)} target-state rows, "
+                       f"{len(self.order_events)} order events")
 
     def _build_csv(self, data: List[Dict], columns: List[str]) -> str:
         """Build CSV string from list of dictionaries."""
