@@ -10,8 +10,9 @@ A modular trend-following strategy using the Dow 30 stocks, implemented with LEA
 
 - **Alpha Model**: Composite trend signals from 3 horizons (20/63/252 day SMAs), normalized by ATR
 - **Portfolio Construction**: Targets 10% annualized volatility with exposure constraints
-- **Execution**: Market orders via ImmediateExecutionModel
+- **Execution**: Signal-strength execution (strong=market; moderate/weak=limit with 0.5%/1.5% offsets)
 - **Logging**: Daily metrics saved to ObjectStore for research analysis
+- **Lean Engine**: `/Users/graham/Documents/QuantConnect/Lean/Algorithm`
 
 ## Project Structure
 
@@ -24,11 +25,14 @@ WolfpackTrend 1/
 │   ├── universe.py         # DOW30 tickers list
 │   ├── alpha.py            # CompositeTrendAlphaModel
 │   ├── portfolio.py        # TargetVolPortfolioConstructionModel
+│   ├── execution.py        # SignalStrengthExecutionModel
 │   └── logger.py           # PortfolioLogger (ObjectStore integration)
 └── claude.md               # This file
 ```
 
 ## Strategy Parameters
+
+### Signal Generation (Alpha Model)
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
@@ -37,11 +41,36 @@ WolfpackTrend 1/
 | SMA Long | 252 days | Long-term trend |
 | ATR Period | 14 days | Volatility normalization |
 | Signal Weights | 0.5/0.3/0.2 | Short/Medium/Long |
+| Min Signal | 0.05 | Skip signals below this magnitude |
+| Rebalance Interval | 5 trading days | Full signal recalculation frequency |
+
+### Portfolio Construction
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
 | Target Vol | 10% annual | Portfolio volatility target |
 | Max Gross | 150% | Maximum gross exposure |
 | Max Net | 50% | Maximum absolute net exposure |
 | Max Per-Name | 10% | Maximum single stock weight |
-| Min Signal | 0.05 | Skip signals below this magnitude |
+| Scaling Days | 5 | Trading days to scale into full position |
+
+### Execution (Signal-Strength Based)
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Strong Threshold | 0.70 | Signals >= this use market orders |
+| Moderate Threshold | 0.30 | Signals >= this use 0.5% limit orders |
+| Moderate Offset | 0.5% | Limit offset for moderate signals |
+| Weak Offset | 1.5% | Limit offset for weak signals |
+| Default Signal | 0.50 | Fallback for unknown symbols |
+| Stale Limit Open Checks | 2 | Cancel an unfilled limit after 2 market-open checks |
+
+### Scaling Schedules (Signal-Dependent)
+
+Positions scale into weekly targets over 5 trading days:
+- **Strong (>= 0.7)**: Front-loaded (sqrt curve) — ~45% on day 1
+- **Moderate (0.3–0.7)**: Mild front-load — ~30% on day 1
+- **Weak (< 0.3)**: Linear — 20% per day evenly
 
 ## LEAN CLI Commands
 
@@ -157,15 +186,23 @@ Current settings in `main.py`:
 
 ## Key Implementation Notes
 
-1. **Signal Generation**: Signals are computed once per day using `tanh(composite_score)` for smooth bounded magnitude in (-1, +1)
+1. **Signal Generation**: Signals are computed every 5 trading days using `tanh(composite_score)` for smooth bounded magnitude in (-1, +1). Cached signals are re-emitted daily to drive the scaling pipeline.
 
-2. **Volatility Targeting**: Uses diagonal approximation (ignores correlations) with 63-day rolling returns
+2. **Daily Scaling**: Alpha emits daily (fresh or cached), PCM scales targets from 0% to 100% over 5 trading days. Strong signals scale faster (front-loaded), weak signals scale linearly.
 
-3. **Constraint Order**: Per-name cap → Gross cap → Net cap (order matters)
+3. **Signal-Strength Execution**: Strong signals (>=0.7) get market orders. Moderate (0.3-0.7) get limit orders at 0.5% offset. Weak (<0.3) get limit orders at 1.5% offset. Exits always use market orders.
 
-4. **Slippage Tracking**: Compares price at signal generation vs actual fill price
+4. **Stale Order Cancellation**: Unfilled limit orders are reviewed via `Schedule.On` at market open; each order is cancelled only after 2 market-open checks so daily bars have time to fill.
 
-5. **No History Calls**: Rolling returns maintained incrementally to avoid performance issues
+5. **Volatility Targeting**: Uses diagonal approximation (ignores correlations) with 63-day rolling returns
+
+6. **Constraint Order**: Per-name cap → Gross cap → Net cap (order matters)
+
+7. **Slippage Tracking**: Compares price at signal generation vs actual fill price
+
+8. **No History Calls**: Rolling returns maintained incrementally to avoid performance issues
+
+9. **Trading-Day Counters**: Both rebalance interval and scaling use trading-day counters (not calendar days), ensuring 100% scaling is always reached before the next rebalance, even during holiday weeks.
 
 ## Common Issues
 

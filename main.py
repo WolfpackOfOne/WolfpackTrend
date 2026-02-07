@@ -1,5 +1,5 @@
 from AlgorithmImports import *
-from models import DOW30, CompositeTrendAlphaModel, TargetVolPortfolioConstructionModel, PortfolioLogger
+from models import DOW30, CompositeTrendAlphaModel, TargetVolPortfolioConstructionModel, SignalStrengthExecutionModel, PortfolioLogger
 
 
 class Dow30TrendAlgorithm(QCAlgorithm):
@@ -9,6 +9,9 @@ class Dow30TrendAlgorithm(QCAlgorithm):
     Uses a composite trend signal from 3 horizons (20/63/252 day SMAs)
     normalized by ATR. Portfolio targets 10% annualized volatility with
     constraints on gross/net exposure and per-name weights.
+
+    Signal strength controls order type (market vs limit) and position
+    scaling pace over the trading week.
 
     Logs daily portfolio metrics to ObjectStore for research analysis.
     """
@@ -43,6 +46,10 @@ class Dow30TrendAlgorithm(QCAlgorithm):
             self.ObjectStore.Delete("wolfpack/signals.csv")
         if self.ObjectStore.ContainsKey("wolfpack/slippage.csv"):
             self.ObjectStore.Delete("wolfpack/slippage.csv")
+        if self.ObjectStore.ContainsKey("wolfpack/targets.csv"):
+            self.ObjectStore.Delete("wolfpack/targets.csv")
+        if self.ObjectStore.ContainsKey("wolfpack/order_events.csv"):
+            self.ObjectStore.Delete("wolfpack/order_events.csv")
         self.Debug("ObjectStore: Cleared previous wolfpack data files")
 
         # Log initialization
@@ -53,36 +60,62 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         self.Debug(f"Universe: {len(DOW30)} Dow 30 stocks")
         self.Debug("=" * 60)
 
-        # Set up framework models (pass logger to alpha for signal tracking)
-        self.SetAlpha(CompositeTrendAlphaModel(
-            short_period=20,
-            medium_period=63,
-            long_period=252,
-            atr_period=14,
-            rebalance_interval_days=7,
-            logger=self.logger,
-            algorithm=self
-        ))
-        self.Debug("Alpha: Composite Trend (SMA 20/63/252, ATR 14, weekly rebalance)")
-
-        # Store reference to portfolio construction model for UpdateReturns
+        # Portfolio construction model (must be created before alpha so alpha can set is_rebalance_day)
         self.pcm = TargetVolPortfolioConstructionModel(
             target_vol_annual=0.10,
             max_gross=1.50,
             max_net=0.50,
             max_weight=0.10,
             vol_lookback=63,
+            scaling_days=5,
+            rebalance_interval_trading_days=5,
             algorithm=self
         )
         self.SetPortfolioConstruction(self.pcm)
-        self.Debug(f"PCM: Target Vol 10%, Max Gross 150%, Max Net 50%, Max Weight 10%")
+        self.Debug(f"PCM: Target Vol 10%, Max Gross 150%, Max Net 50%, Max Weight 10%, Scaling 5 days")
 
-        # Immediate execution (market orders)
-        self.SetExecution(ImmediateExecutionModel())
+        # Alpha model (emits daily, recalculates every 5 trading days)
+        self.SetAlpha(CompositeTrendAlphaModel(
+            short_period=20,
+            medium_period=63,
+            long_period=252,
+            atr_period=14,
+            rebalance_interval_trading_days=5,
+            logger=self.logger,
+            algorithm=self
+        ))
+        self.Debug("Alpha: Composite Trend (SMA 20/63/252, ATR 14, weekly rebalance, daily emission)")
+
+        self.execution_model = SignalStrengthExecutionModel(
+            strong_threshold=0.70,
+            moderate_threshold=0.30,
+            moderate_offset_pct=0.005,
+            weak_offset_pct=0.015,
+            default_signal_strength=0.50,
+            limit_cancel_after_open_checks=2
+        )
+        self.SetExecution(self.execution_model)
+        self.Debug(
+            "Execution: Signal-strength based "
+            "(strong>=0.70->market, moderate>=0.30->limit 0.5%, weak->limit 1.5%, "
+            "stale limits cancel after 2 open checks)"
+        )
+
+        # Schedule stale order cancellation at market open, before the pipeline runs
+        self.Schedule.On(
+            self.DateRules.EveryDay(),
+            self.TimeRules.AfterMarketOpen("SPY", 0),
+            self._cancel_stale_orders
+        )
 
         # Settings
         self.Settings.RebalancePortfolioOnInsightChanges = True
         self.Settings.RebalancePortfolioOnSecurityChanges = True
+
+    def _cancel_stale_orders(self):
+        """Cancel unfilled limit orders from previous days before today's pipeline runs."""
+        if self.execution_model is not None:
+            self.execution_model.cancel_stale_orders(self)
 
     def OnData(self, data):
         # Update rolling returns for volatility estimation
@@ -93,6 +126,32 @@ class Dow30TrendAlgorithm(QCAlgorithm):
 
     def OnOrderEvent(self, orderEvent):
         """Track slippage by comparing fill price to expected price at signal generation."""
+        if self.execution_model is not None:
+            self.execution_model.OnOrderEvent(self, orderEvent)
+
+        order = self.Transactions.GetOrderById(orderEvent.OrderId)
+        order_type = str(order.Type) if order is not None else ""
+        direction = str(order.Direction) if order is not None else (
+            "Buy" if orderEvent.FillQuantity > 0 else "Sell"
+        )
+        quantity = float(order.Quantity) if order is not None else 0.0
+        limit_price = getattr(order, "LimitPrice", None) if order is not None else None
+        tag = order.Tag if order is not None else ""
+
+        self.logger.log_order_event(
+            date=self.Time,
+            order_id=orderEvent.OrderId,
+            symbol=orderEvent.Symbol,
+            status=str(orderEvent.Status),
+            direction=direction,
+            quantity=quantity,
+            fill_quantity=float(orderEvent.FillQuantity),
+            fill_price=float(orderEvent.FillPrice),
+            order_type=order_type,
+            limit_price=limit_price,
+            tag=tag
+        )
+
         if orderEvent.Status != OrderStatus.Filled:
             return
 
