@@ -10,7 +10,7 @@ A modular trend-following strategy using the Dow 30 stocks, implemented with LEA
 
 - **Alpha Model**: Composite trend signals from 3 horizons (20/63/252 day SMAs), normalized by ATR
 - **Portfolio Construction**: Targets 10% annualized volatility with exposure constraints
-- **Execution**: Signal-strength execution (strong=market; moderate/weak=limit with 0.5%/1.5% offsets)
+- **Execution**: Signal-strength execution (strong=limit at market; moderate/weak=limit with 0.5%/1.5% offsets)
 - **Logging**: Daily metrics saved to ObjectStore for research analysis
 - **Lean Engine**: `/Users/graham/Documents/QuantConnect/Lean/Algorithm`
 
@@ -58,7 +58,8 @@ WolfpackTrend 1/
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| Strong Threshold | 0.70 | Signals >= this use market orders |
+| Strong Threshold | 0.70 | Signals >= this use limit orders at market price |
+| Strong Offset | 0.0% | No offset = market price |
 | Moderate Threshold | 0.30 | Signals >= this use 0.5% limit orders |
 | Moderate Offset | 0.5% | Limit offset for moderate signals |
 | Weak Offset | 1.5% | Limit offset for weak signals |
@@ -190,7 +191,7 @@ Current settings in `main.py`:
 
 2. **Daily Scaling**: Alpha emits daily (fresh or cached), PCM scales targets from 0% to 100% over 5 trading days. Strong signals scale faster (front-loaded), weak signals scale linearly.
 
-3. **Signal-Strength Execution**: Strong signals (>=0.7) get market orders. Moderate (0.3-0.7) get limit orders at 0.5% offset. Weak (<0.3) get limit orders at 1.5% offset. Exits always use market orders.
+3. **Signal-Strength Execution**: Strong signals (>=0.7) get limit orders at market price (0% offset). Moderate (0.3-0.7) get limit orders at 0.5% offset. Weak (<0.3) get limit orders at 1.5% offset. Exits always use market orders.
 
 4. **Stale Order Cancellation**: Unfilled limit orders are reviewed via `Schedule.On` at market open; each order is cancelled only after 2 market-open checks so daily bars have time to fill.
 

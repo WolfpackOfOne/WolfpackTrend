@@ -16,12 +16,14 @@ class SignalStrengthExecutionModel(ExecutionModel):
     def __init__(self,
                  strong_threshold=0.70,
                  moderate_threshold=0.30,
+                 strong_offset_pct=0.0,
                  moderate_offset_pct=0.005,
                  weak_offset_pct=0.015,
                  default_signal_strength=0.50,
                  limit_cancel_after_open_checks=2):
         self.strong_threshold = strong_threshold
         self.moderate_threshold = moderate_threshold
+        self.strong_offset_pct = strong_offset_pct
         self.moderate_offset_pct = moderate_offset_pct
         self.weak_offset_pct = weak_offset_pct
         self.default_signal_strength = default_signal_strength
@@ -59,12 +61,25 @@ class SignalStrengthExecutionModel(ExecutionModel):
 
             signal_strength = self._get_signal_strength(algorithm, symbol)
 
-            if is_exit or signal_strength >= self.strong_threshold:
+            if is_exit:
+                # Exits always use market orders
                 order_type = "market"
-                tier = "exit" if is_exit else "strong"
+                tier = "exit"
                 tag = self._build_order_tag(algorithm, tier, signal_strength)
                 ticket = algorithm.MarketOrder(symbol, unordered_quantity, tag=tag)
                 if ticket is not None:
+                    self.market_price_at_submit[ticket.OrderId] = price
+            elif signal_strength >= self.strong_threshold:
+                # Strong signals use limit orders at market price
+                order_type = "limit"
+                tier = "strong"
+                limit_price = self._compute_limit_price(
+                    security, price, unordered_quantity, self.strong_offset_pct)
+                tag = self._build_order_tag(algorithm, tier, signal_strength)
+                ticket = algorithm.LimitOrder(symbol, unordered_quantity, limit_price, tag=tag)
+                if ticket is not None:
+                    self.open_limit_tickets.append(ticket)
+                    self.limit_open_checks[ticket.OrderId] = 0
                     self.market_price_at_submit[ticket.OrderId] = price
             elif signal_strength >= self.moderate_threshold:
                 order_type = "limit"
