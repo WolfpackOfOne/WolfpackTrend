@@ -153,6 +153,12 @@ class CompositeTrendAlphaModel(AlphaModel):
             dist_medium = (price - sma_m) / atr_value
             dist_long = (price - sma_l) / atr_value
 
+            # Require all three signals to agree in direction
+            all_positive = (dist_short > 0 and dist_medium > 0 and dist_long > 0)
+            all_negative = (dist_short < 0 and dist_medium < 0 and dist_long < 0)
+            if not (all_positive or all_negative):
+                continue  # Skip if signals don't all agree in direction
+
             # Composite score
             score = (self.weight_short * dist_short +
                      self.weight_medium * dist_medium +

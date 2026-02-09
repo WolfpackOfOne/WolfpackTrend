@@ -187,7 +187,7 @@ Current settings in `main.py`:
 
 ## Key Implementation Notes
 
-1. **Signal Generation**: Signals are computed every 5 trading days using `tanh(composite_score)` for smooth bounded magnitude in (-1, +1). Cached signals are re-emitted daily to drive the scaling pipeline.
+1. **Signal Generation**: Signals are computed every 5 trading days using `tanh(composite_score)` for smooth bounded magnitude in (-1, +1). **All three trend horizons (short/medium/long) must agree in direction** - if price is above all three SMAs or below all three SMAs, a signal is generated; otherwise the symbol is skipped. Cached signals are re-emitted daily to drive the scaling pipeline.
 
 2. **Daily Scaling**: Alpha emits daily (fresh or cached), PCM scales targets from 0% to 100% over 5 trading days. Strong signals scale faster (front-loaded), weak signals scale linearly.
 
