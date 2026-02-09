@@ -40,7 +40,7 @@ WolfpackTrend 1/
 | SMA Medium | 63 days | Medium-term trend |
 | SMA Long | 252 days | Long-term trend |
 | ATR Period | 14 days | Volatility normalization |
-| Signal Weights | 0.5/0.3/0.2 | Short/Medium/Long |
+| Signal Weights | 0.2/0.5/0.3 | Short/Medium/Long |
 | Min Signal | 0.05 | Skip signals below this magnitude |
 | Rebalance Interval | 5 trading days | Full signal recalculation frequency |
 

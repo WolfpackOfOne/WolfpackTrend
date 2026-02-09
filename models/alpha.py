@@ -26,9 +26,9 @@ class CompositeTrendAlphaModel(AlphaModel):
         self.signal_temperature = max(1e-6, float(signal_temperature))
 
         # Weights for composite score
-        self.weight_short = 0.5
-        self.weight_medium = 0.3
-        self.weight_long = 0.2
+        self.weight_short = 0.2
+        self.weight_medium = 0.5
+        self.weight_long = 0.3
 
         # Minimum magnitude threshold to emit insight
         self.min_magnitude = 0.05
