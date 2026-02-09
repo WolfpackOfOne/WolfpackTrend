@@ -16,12 +16,14 @@ class CompositeTrendAlphaModel(AlphaModel):
 
     def __init__(self, short_period=20, medium_period=63, long_period=252,
                  atr_period=14, rebalance_interval_trading_days=5,
+                 signal_temperature=3.0,
                  logger=None, algorithm=None):
         self.short_period = short_period
         self.medium_period = medium_period
         self.long_period = long_period
         self.atr_period = atr_period
         self.rebalance_interval_trading_days = max(1, int(rebalance_interval_trading_days))
+        self.signal_temperature = max(1e-6, float(signal_temperature))
 
         # Weights for composite score
         self.weight_short = 0.5
@@ -156,8 +158,8 @@ class CompositeTrendAlphaModel(AlphaModel):
                      self.weight_medium * dist_medium +
                      self.weight_long * dist_long)
 
-            # Smooth bounded magnitude
-            mag = math.tanh(score)
+            # Smooth bounded magnitude with temperature scaling
+            mag = math.tanh(score / self.signal_temperature)
 
             # Skip tiny signals
             if abs(mag) < self.min_magnitude:

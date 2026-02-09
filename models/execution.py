@@ -32,6 +32,7 @@ class SignalStrengthExecutionModel(ExecutionModel):
         self.targets_collection = PortfolioTargetCollection()
         self.open_limit_tickets = []
         self.limit_open_checks = {}  # order_id -> number of open checks observed
+        self.market_price_at_submit = {}  # order_id -> market price when order was submitted
 
     def Execute(self, algorithm, targets):
         self.targets_collection.AddRange(targets)
@@ -62,7 +63,9 @@ class SignalStrengthExecutionModel(ExecutionModel):
                 order_type = "market"
                 tier = "exit" if is_exit else "strong"
                 tag = self._build_order_tag(algorithm, tier, signal_strength)
-                algorithm.MarketOrder(symbol, unordered_quantity, tag=tag)
+                ticket = algorithm.MarketOrder(symbol, unordered_quantity, tag=tag)
+                if ticket is not None:
+                    self.market_price_at_submit[ticket.OrderId] = price
             elif signal_strength >= self.moderate_threshold:
                 order_type = "limit"
                 tier = "moderate"
@@ -73,6 +76,7 @@ class SignalStrengthExecutionModel(ExecutionModel):
                 if ticket is not None:
                     self.open_limit_tickets.append(ticket)
                     self.limit_open_checks[ticket.OrderId] = 0
+                    self.market_price_at_submit[ticket.OrderId] = price
             else:
                 order_type = "limit"
                 tier = "weak"
@@ -83,6 +87,7 @@ class SignalStrengthExecutionModel(ExecutionModel):
                 if ticket is not None:
                     self.open_limit_tickets.append(ticket)
                     self.limit_open_checks[ticket.OrderId] = 0
+                    self.market_price_at_submit[ticket.OrderId] = price
 
             # Debug logging
             if order_type == "market":
@@ -125,6 +130,8 @@ class SignalStrengthExecutionModel(ExecutionModel):
                 if t.OrderId != order_event.OrderId
             ]
             self.limit_open_checks.pop(order_event.OrderId, None)
+            # Keep market_price_at_submit until after logging is complete
+            # Will be cleaned up in main.py after logger.log_order_event is called
 
     def OnSecuritiesChanged(self, algorithm, changes):
         for removed in changes.RemovedSecurities:

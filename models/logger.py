@@ -314,6 +314,7 @@ class PortfolioLogger:
                         status: str, direction: str, quantity: float,
                         fill_quantity: float, fill_price: float,
                         order_type: str, limit_price: Optional[float] = None,
+                        market_price_at_submit: Optional[float] = None,
                         tag: str = "") -> None:
         """Log all order events (submitted, partially filled, filled, canceled, etc.)."""
         self.order_events.append({
@@ -327,6 +328,7 @@ class PortfolioLogger:
             'fill_price': round(fill_price, 4) if fill_price else '',
             'order_type': order_type,
             'limit_price': round(limit_price, 4) if limit_price is not None else '',
+            'market_price_at_submit': round(market_price_at_submit, 4) if market_price_at_submit is not None else '',
             'tag': tag
         })
 
@@ -387,7 +389,7 @@ class PortfolioLogger:
             csv_content = self._build_csv(self.order_events, [
                 'date', 'order_id', 'symbol', 'status', 'direction',
                 'quantity', 'fill_quantity', 'fill_price',
-                'order_type', 'limit_price', 'tag'
+                'order_type', 'limit_price', 'market_price_at_submit', 'tag'
             ])
             algorithm.ObjectStore.Save("wolfpack/order_events.csv", csv_content)
 

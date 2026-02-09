@@ -81,10 +81,11 @@ class Dow30TrendAlgorithm(QCAlgorithm):
             long_period=252,
             atr_period=14,
             rebalance_interval_trading_days=5,
+            signal_temperature=3.0,
             logger=self.logger,
             algorithm=self
         ))
-        self.Debug("Alpha: Composite Trend (SMA 20/63/252, ATR 14, weekly rebalance, daily emission)")
+        self.Debug("Alpha: Composite Trend (SMA 20/63/252, ATR 14, weekly rebalance, daily emission, temp=3.0)")
 
         self.execution_model = SignalStrengthExecutionModel(
             strong_threshold=0.70,
@@ -138,6 +139,11 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         limit_price = getattr(order, "LimitPrice", None) if order is not None else None
         tag = order.Tag if order is not None else ""
 
+        # Get market price at submit time from execution model
+        market_price_at_submit = None
+        if self.execution_model is not None:
+            market_price_at_submit = self.execution_model.market_price_at_submit.get(orderEvent.OrderId)
+
         self.logger.log_order_event(
             date=self.Time,
             order_id=orderEvent.OrderId,
@@ -149,8 +155,14 @@ class Dow30TrendAlgorithm(QCAlgorithm):
             fill_price=float(orderEvent.FillPrice),
             order_type=order_type,
             limit_price=limit_price,
+            market_price_at_submit=market_price_at_submit,
             tag=tag
         )
+
+        # Clean up market price tracking after logging
+        if orderEvent.Status in (OrderStatus.Filled, OrderStatus.Canceled, OrderStatus.Invalid):
+            if self.execution_model is not None:
+                self.execution_model.market_price_at_submit.pop(orderEvent.OrderId, None)
 
         if orderEvent.Status != OrderStatus.Filled:
             return
