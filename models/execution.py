@@ -35,6 +35,7 @@ class SignalStrengthExecutionModel(ExecutionModel):
         self.open_limit_tickets = []
         self.limit_open_checks = {}  # order_id -> number of open checks observed
         self.market_price_at_submit = {}  # order_id -> market price when order was submitted
+        self.order_week_ids = {}  # order_id -> week_id (rebalance cycle identifier)
 
     def Execute(self, algorithm, targets):
         self.targets_collection.AddRange(targets)
@@ -81,6 +82,10 @@ class SignalStrengthExecutionModel(ExecutionModel):
                     self.open_limit_tickets.append(ticket)
                     self.limit_open_checks[ticket.OrderId] = 0
                     self.market_price_at_submit[ticket.OrderId] = price
+                    # Extract and store week_id for signal-aware cancellation
+                    week_id = self._extract_week_id_from_tag(tag)
+                    if week_id:
+                        self.order_week_ids[ticket.OrderId] = week_id
             elif signal_strength >= self.moderate_threshold:
                 order_type = "limit"
                 tier = "moderate"
@@ -92,6 +97,10 @@ class SignalStrengthExecutionModel(ExecutionModel):
                     self.open_limit_tickets.append(ticket)
                     self.limit_open_checks[ticket.OrderId] = 0
                     self.market_price_at_submit[ticket.OrderId] = price
+                    # Extract and store week_id for signal-aware cancellation
+                    week_id = self._extract_week_id_from_tag(tag)
+                    if week_id:
+                        self.order_week_ids[ticket.OrderId] = week_id
             else:
                 order_type = "limit"
                 tier = "weak"
@@ -103,6 +112,10 @@ class SignalStrengthExecutionModel(ExecutionModel):
                     self.open_limit_tickets.append(ticket)
                     self.limit_open_checks[ticket.OrderId] = 0
                     self.market_price_at_submit[ticket.OrderId] = price
+                    # Extract and store week_id for signal-aware cancellation
+                    week_id = self._extract_week_id_from_tag(tag)
+                    if week_id:
+                        self.order_week_ids[ticket.OrderId] = week_id
 
             # Debug logging
             if order_type == "market":
@@ -119,24 +132,118 @@ class SignalStrengthExecutionModel(ExecutionModel):
 
     def cancel_stale_orders(self, algorithm):
         """
-        Cancel all tracked open limit orders. Called from main.py's
-        scheduled event at market open, before the pipeline runs.
+        Cancel limit orders from PREVIOUS rebalance cycles only.
+
+        This allows the full 5-day scaling window to complete for current-cycle orders
+        while still preventing stale orders from old signals.
+
+        Falls back to legacy 2-check behavior if week_id tracking is unavailable.
+        """
+        # Get current week_id from PCM (set on rebalance day in portfolio model)
+        pcm = getattr(algorithm, 'pcm', None)
+        current_week_id = getattr(pcm, 'current_week_id', None) if pcm is not None else None
+
+        if not current_week_id:
+            # Fallback: if no current_week_id set, use old 2-check behavior
+            algorithm.Debug("  [Signal-Aware] Warning: current_week_id not set, using legacy 2-check cancellation")
+            self._cancel_stale_orders_legacy(algorithm)
+            return
+
+        # Cancel orders from previous rebalance cycles
+        orders_to_cancel = []
+        for ticket in self.open_limit_tickets:
+            if ticket.Status in (OrderStatus.Submitted, OrderStatus.PartiallyFilled):
+                order_week_id = self.order_week_ids.get(ticket.OrderId)
+
+                if not order_week_id:
+                    # Order has no week_id (possible early in run); fall back to legacy logic for this order
+                    algorithm.Debug(f"  [Signal-Aware] Warning: Order {ticket.OrderId} has no week_id; applying legacy check")
+                    # Legacy behavior for this ticket only
+                    checks = self.limit_open_checks.get(ticket.OrderId, 0) + 1
+                    self.limit_open_checks[ticket.OrderId] = checks
+                    if checks >= self.limit_cancel_after_open_checks:
+                        algorithm.Debug(
+                            f"  [LEGACY] Cancelling stale order {ticket.OrderId} ({ticket.Symbol.Value}) after {checks} checks"
+                        )
+                        orders_to_cancel.append(ticket)
+                    continue
+
+                # Compare week_id dates directly (YYYY-MM-DD format allows lexicographic comparison)
+                # Only cancel if order is from PREVIOUS cycle (older date)
+                if order_week_id < current_week_id:
+                    algorithm.Debug(
+                        f"  [Signal-Aware] Cancelling order {ticket.OrderId} ({ticket.Symbol.Value}) "
+                        f"from week {order_week_id} (current: {current_week_id})"
+                    )
+                    orders_to_cancel.append(ticket)
+
+        # Execute cancellations and cleanup
+        for ticket in orders_to_cancel:
+            ticket.Cancel()
+
+            # Cleanup tracking dictionaries
+            if ticket.OrderId in self.limit_open_checks:
+                del self.limit_open_checks[ticket.OrderId]
+            if ticket.OrderId in self.market_price_at_submit:
+                del self.market_price_at_submit[ticket.OrderId]
+            if ticket.OrderId in self.order_week_ids:
+                del self.order_week_ids[ticket.OrderId]
+
+            self.open_limit_tickets.remove(ticket)
+
+    def _cancel_stale_orders_legacy(self, algorithm):
+        """
+        Legacy 2-check cancellation logic (fallback only).
+
+        Used when week_id tracking is unavailable or during warmup period.
         """
         still_open = []
         for ticket in self.open_limit_tickets:
             if ticket.Status in (OrderStatus.Submitted, OrderStatus.PartiallyFilled):
                 checks = self.limit_open_checks.get(ticket.OrderId, 0) + 1
                 self.limit_open_checks[ticket.OrderId] = checks
+
                 if checks >= self.limit_cancel_after_open_checks:
-                    ticket.Cancel()
                     algorithm.Debug(
-                        f"  Cancelled stale limit: {ticket.Symbol.Value} "
+                        f"  [LEGACY] Cancelling stale limit: {ticket.Symbol.Value} "
                         f"qty={ticket.Quantity} open_checks={checks}")
+                    ticket.Cancel()
+
+                    # Cleanup
+                    if ticket.OrderId in self.limit_open_checks:
+                        del self.limit_open_checks[ticket.OrderId]
+                    if ticket.OrderId in self.market_price_at_submit:
+                        del self.market_price_at_submit[ticket.OrderId]
+                    if ticket.OrderId in self.order_week_ids:
+                        del self.order_week_ids[ticket.OrderId]
+
             if ticket.Status not in (OrderStatus.Filled, OrderStatus.Canceled, OrderStatus.Invalid):
                 still_open.append(ticket)
             else:
                 self.limit_open_checks.pop(ticket.OrderId, None)
+
         self.open_limit_tickets = still_open
+
+    def _extract_week_id_from_tag(self, tag):
+        """
+        Extract week_id from order tag string.
+
+        Args:
+            tag (str): Order tag in format 'tier=moderate;week_id=2024-01-02;...'
+
+        Returns:
+            str: Week ID (YYYY-MM-DD format) or None if not found
+        """
+        if not tag:
+            return None
+
+        import re
+        match = re.search(r'week_id=([^;]+)', tag)
+        if match:
+            week_id = match.group(1).strip()
+            # Return None if week_id is empty string (can happen early in run)
+            return week_id if week_id else None
+        return None
 
     def OnOrderEvent(self, algorithm, order_event):
         if order_event.Status in (OrderStatus.Filled, OrderStatus.Canceled, OrderStatus.Invalid):
@@ -145,6 +252,7 @@ class SignalStrengthExecutionModel(ExecutionModel):
                 if t.OrderId != order_event.OrderId
             ]
             self.limit_open_checks.pop(order_event.OrderId, None)
+            self.order_week_ids.pop(order_event.OrderId, None)
             # Keep market_price_at_submit until after logging is complete
             # Will be cleaned up in main.py after logger.log_order_event is called
 
@@ -163,6 +271,7 @@ class SignalStrengthExecutionModel(ExecutionModel):
             ]
             for order_id in removed_order_ids:
                 self.limit_open_checks.pop(order_id, None)
+                self.order_week_ids.pop(order_id, None)
 
     def _get_signal_strength(self, algorithm, symbol):
         """
