@@ -98,8 +98,8 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         self.SetExecution(self.execution_model)
         self.Debug(
             "Execution: Signal-strength based "
-            "(strong>=0.70->market, moderate>=0.30->limit 0.5%, weak->limit 1.5%, "
-            "stale limits cancel after 2 open checks)"
+            "(strong>=0.70->limit@market, moderate>=0.30->limit 0.5%, weak->limit 1.5%, "
+            "signal-aware cancellation, legacy fallback after 2 open checks)"
         )
 
         # Schedule stale order cancellation at market open, before the pipeline runs
