@@ -9,8 +9,9 @@ class SignalStrengthExecutionModel(ExecutionModel):
     - Weak signals (< moderate_threshold): Limit orders at weak_offset_pct
     - Exits: Always market orders
 
-    Unfilled limit orders are cancelled via a scheduled event at market open
-    (called from main.py), before the pipeline runs.
+    Unfilled limit orders are cancelled via week_id cycle logic inside
+    portfolio construction (after current_week_id is refreshed on rebalance days).
+    Legacy 2-check fallback applies when week_id tracking is unavailable.
     """
 
     def __init__(self,
@@ -64,7 +65,6 @@ class SignalStrengthExecutionModel(ExecutionModel):
 
             if is_exit:
                 # Exits always use market orders
-                order_type = "market"
                 tier = "exit"
                 tag = self._build_order_tag(algorithm, tier, signal_strength)
                 ticket = algorithm.MarketOrder(symbol, unordered_quantity, tag=tag)
@@ -72,7 +72,6 @@ class SignalStrengthExecutionModel(ExecutionModel):
                     self.market_price_at_submit[ticket.OrderId] = price
             elif signal_strength >= self.strong_threshold:
                 # Strong signals use limit orders at market price
-                order_type = "limit"
                 tier = "strong"
                 limit_price = self._compute_limit_price(
                     security, price, unordered_quantity, self.strong_offset_pct)
@@ -87,7 +86,6 @@ class SignalStrengthExecutionModel(ExecutionModel):
                     if week_id:
                         self.order_week_ids[ticket.OrderId] = week_id
             elif signal_strength >= self.moderate_threshold:
-                order_type = "limit"
                 tier = "moderate"
                 limit_price = self._compute_limit_price(
                     security, price, unordered_quantity, self.moderate_offset_pct)
@@ -102,7 +100,6 @@ class SignalStrengthExecutionModel(ExecutionModel):
                     if week_id:
                         self.order_week_ids[ticket.OrderId] = week_id
             else:
-                order_type = "limit"
                 tier = "weak"
                 limit_price = self._compute_limit_price(
                     security, price, unordered_quantity, self.weak_offset_pct)
@@ -116,17 +113,6 @@ class SignalStrengthExecutionModel(ExecutionModel):
                     week_id = self._extract_week_id_from_tag(tag)
                     if week_id:
                         self.order_week_ids[ticket.OrderId] = week_id
-
-            # Debug logging
-            if order_type == "market":
-                algorithm.Debug(
-                    f"  {order_type.title()}: {'Buy' if unordered_quantity > 0 else 'Sell'} "
-                    f"{abs(unordered_quantity)} {symbol.Value} (signal={signal_strength:.2f})")
-            else:
-                algorithm.Debug(
-                    f"  Limit: {'Buy' if unordered_quantity > 0 else 'Sell'} "
-                    f"{abs(unordered_quantity)} {symbol.Value} @ ${limit_price:.2f} "
-                    f"(signal={signal_strength:.2f})")
 
         self.targets_collection.ClearFulfilled(algorithm)
 

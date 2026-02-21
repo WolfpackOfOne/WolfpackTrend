@@ -99,10 +99,11 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         self.Debug(
             "Execution: Signal-strength based "
             "(strong>=0.70->limit@market, moderate>=0.30->limit 0.5%, weak->limit 1.5%, "
-            "signal-aware cancellation, legacy fallback after 2 open checks)"
+            "stale limits cancel at market open + week_id cycle logic; legacy fallback after 2 checks)"
         )
 
-        # Schedule stale order cancellation at market open, before the pipeline runs
+        # Cancel stale limit orders at market open before the trading pipeline runs.
+        # Portfolio model keeps an in-pipeline once/day cancellation as backup.
         self.Schedule.On(
             self.DateRules.EveryDay(),
             self.TimeRules.AfterMarketOpen("SPY", 0),
@@ -114,9 +115,13 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         self.Settings.RebalancePortfolioOnSecurityChanges = True
 
     def _cancel_stale_orders(self):
-        """Cancel unfilled limit orders from previous days before today's pipeline runs."""
+        """Cancel stale limit orders before target generation."""
         if self.execution_model is not None:
             self.execution_model.cancel_stale_orders(self)
+
+        # Keep the portfolio-model fallback from running twice on the same day.
+        if self.pcm is not None:
+            self.pcm.last_cancel_check_date = self.Time.date()
 
     def OnData(self, data):
         # Update rolling returns for volatility estimation
@@ -176,10 +181,6 @@ class Dow30TrendAlgorithm(QCAlgorithm):
 
         # Determine direction
         direction = "Buy" if quantity > 0 else "Sell"
-
-        # Log the trade
-        fill_value = abs(quantity * fill_price)
-        self.Debug(f"  Trade: {direction} {abs(quantity)} {symbol.Value} @ ${fill_price:.2f} (${fill_value:,.0f})")
 
         self.logger.log_slippage(
             date=self.Time,
