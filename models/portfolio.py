@@ -49,6 +49,7 @@ class TargetVolPortfolioConstructionModel(PortfolioConstructionModel):
         self.is_rebalance_day = False
         self.current_week_id = None        # Rebalance date (YYYY-MM-DD)
         self.week_plan = {}                # symbol -> {start_w, weekly_target_w}
+        self.last_cancel_check_date = None  # date of last stale-order cancellation pass
 
         # Build dynamic scaling schedules
         self.strong_schedule = self._build_schedule(front_load_factor=2.0)
@@ -139,6 +140,15 @@ class TargetVolPortfolioConstructionModel(PortfolioConstructionModel):
                 self.current_scale_day + 1,
                 self.scaling_days - 1
             )
+
+        # Run stale-order cancellation once per day inside pipeline.
+        # On rebalance days, this executes after current_week_id is refreshed.
+        today = algorithm.Time.date()
+        if self.last_cancel_check_date != today:
+            execution_model = getattr(algorithm, "execution_model", None)
+            if execution_model is not None:
+                execution_model.cancel_stale_orders(algorithm)
+            self.last_cancel_check_date = today
 
         # Emit scaled targets for each symbol
         for symbol, final_weight in self.weekly_targets.items():
