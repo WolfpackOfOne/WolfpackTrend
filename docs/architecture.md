@@ -27,7 +27,7 @@ WolfpackTrend uses a layered architecture built on QuantConnect's LEAN framework
 │    constraints, limit pricing, scaling           │
 │  - formatting.py: CSV builder, tag parsing       │
 │  - data_types.py: typed dataclass stubs          │
-│  - universe.py: re-exports DOW30 ticker list     │
+│  - universe.py: re-exports EQUITY_UNIVERSE list   │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -37,15 +37,15 @@ WolfpackTrend uses a layered architecture built on QuantConnect's LEAN framework
 WolfpackTrend 1/
 ├── main.py                     # Algorithm entrypoint (QCAlgorithm subclass)
 ├── models/                     # Compatibility adapters (thin re-exports)
-│   ├── __init__.py             # Exports: DOW30, all model classes
-│   ├── universe.py             # DOW30 ticker list (source of truth)
+│   ├── __init__.py             # Exports: EQUITY_UNIVERSE, all model classes
+│   ├── universe.py             # EQUITY_UNIVERSE ticker list (source of truth)
 │   ├── alpha.py                # → signals.alpha.CompositeTrendAlphaModel
 │   ├── portfolio.py            # → risk.portfolio.TargetVolPortfolioConstructionModel
 │   ├── execution.py            # → execution.execution.SignalStrengthExecutionModel
 │   └── logger.py               # → loggers.portfolio_logger.PortfolioLogger
 ├── core/                       # Pure functions (no QC dependencies)
-│   ├── __init__.py             # Exports DOW30
-│   ├── universe.py             # Re-exports DOW30 from models.universe
+│   ├── __init__.py             # Exports EQUITY_UNIVERSE
+│   ├── universe.py             # Re-exports EQUITY_UNIVERSE from shared.universe
 │   ├── math_utils.py           # Signal computation, vol estimation, constraints
 │   ├── formatting.py           # CSV building, order tag parsing
 │   └── data_types.py           # Typed dataclass stubs (Signal, TargetState, etc.)

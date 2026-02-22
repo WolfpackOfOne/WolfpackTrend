@@ -4,8 +4,8 @@ This file defines repository-specific instructions for coding agents working in 
 
 ## Project Summary
 - Strategy: modular trend-following equity strategy built on LEAN.
-- Universe: static ticker list in `models/universe.py` (`DOW30`, currently 30 names).
-- Entrypoint: `main.py` (`Dow30TrendAlgorithm`).
+- Universe: static ticker list in `models/universe.py` (`EQUITY_UNIVERSE`, currently 30 names).
+- Entrypoint: `main.py` (`WolfpackTrendAlgorithm`).
 - Lean engine path: `/Users/graham/Documents/QuantConnect/Lean/Algorithm`.
 
 ## Architecture

@@ -1,10 +1,10 @@
 from AlgorithmImports import *
-from models import DOW30, CompositeTrendAlphaModel, TargetVolPortfolioConstructionModel, SignalStrengthExecutionModel, PortfolioLogger
+from models import EQUITY_UNIVERSE, CompositeTrendAlphaModel, TargetVolPortfolioConstructionModel, SignalStrengthExecutionModel, PortfolioLogger
 
 
-class Dow30TrendAlgorithm(QCAlgorithm):
+class WolfpackTrendAlgorithm(QCAlgorithm):
     """
-    Dow 30 Trend-Following Strategy
+    Equity Trend-Following Strategy
 
     Uses a composite trend signal from 3 horizons (20/63/252 day SMAs)
     normalized by ATR. Portfolio targets 10% annualized volatility with
@@ -28,8 +28,8 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         # Warmup for SMA(252)
         self.SetWarmUp(252, Resolution.Daily)
 
-        # Add Dow 30 equities
-        for ticker in DOW30:
+        # Add equity universe
+        for ticker in EQUITY_UNIVERSE:
             self.AddEquity(ticker, Resolution.Daily)
 
         # Initialize logger for portfolio tracking
@@ -57,7 +57,7 @@ class Dow30TrendAlgorithm(QCAlgorithm):
         self.Debug("WOLFPACK TREND STRATEGY INITIALIZED")
         self.Debug(f"Period: {self.StartDate.strftime('%Y-%m-%d')} to {self.EndDate.strftime('%Y-%m-%d')}")
         self.Debug(f"Starting Cash: ${self.Portfolio.Cash:,.0f}")
-        self.Debug(f"Universe: {len(DOW30)} Dow 30 stocks")
+        self.Debug(f"Universe: {len(EQUITY_UNIVERSE)} stocks")
         self.Debug("=" * 60)
 
         # Portfolio construction model (must be created before alpha so alpha can set is_rebalance_day)

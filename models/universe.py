@@ -1,2 +1,2 @@
 """Compatibility adapter for legacy imports."""
-from shared.universe import DOW30
+from shared.universe import EQUITY_UNIVERSE

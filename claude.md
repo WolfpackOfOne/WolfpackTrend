@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-A modular trend-following strategy implemented with LEAN's framework architecture. The universe is defined as a static ticker list in `models/universe.py` (currently the DOW30 variable, 30 tickers):
+A modular trend-following strategy implemented with LEAN's framework architecture. The universe is defined as a static ticker list in `models/universe.py` (currently the `EQUITY_UNIVERSE` variable, 30 tickers):
 
 - **Alpha Model**: Composite trend signals from 3 horizons (20/63/252 day SMAs), normalized by ATR
 - **Portfolio Construction**: Targets 10% annualized volatility with exposure constraints

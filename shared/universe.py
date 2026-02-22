@@ -1,7 +1,7 @@
 """Shared universe constants used by compatibility and domain layers."""
 
-# Dow 30 tickers (static basket)
-DOW30 = [
+# Static equity universe
+EQUITY_UNIVERSE = [
     "AAPL", "AMGN", "AXP", "BA", "CAT", "CRM",
     "CSCO", "CVX", "DIS", "DOW", "GS", "HD",
     "HON", "IBM", "INTC", "JNJ", "JPM", "KO",
@@ -10,4 +10,4 @@ DOW30 = [
 ]
 
 # DEBUG: Single ticker for P&L debugging
-# DOW30 = ["AAPL"]
+# EQUITY_UNIVERSE = ["AAPL"]

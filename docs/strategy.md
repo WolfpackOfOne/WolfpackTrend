@@ -1,10 +1,10 @@
 # Strategy Documentation
 
-WolfpackTrend is a systematic long/short trend-following strategy trading the Dow Jones 30 constituents. It uses a composite momentum signal, targets a fixed portfolio volatility, and executes with signal-strength-based limit orders.
+WolfpackTrend is a systematic long/short trend-following strategy trading a static equity universe. It uses a composite momentum signal, targets a fixed portfolio volatility, and executes with signal-strength-based limit orders.
 
 ## Universe
 
-Static list of 30 Dow Jones Industrial Average constituents defined in `models/universe.py`. The universe does not rotate dynamically.
+Static list of equities defined in `models/universe.py` (`EQUITY_UNIVERSE`). The universe does not rotate dynamically.
 
 ## Signal Generation (Alpha Model)
 

@@ -1,2 +1,2 @@
 """Core universe export sourced from shared constants."""
-from shared.universe import DOW30
+from shared.universe import EQUITY_UNIVERSE

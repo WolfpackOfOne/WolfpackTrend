@@ -1,1 +1,1 @@
-from .universe import DOW30
+from .universe import EQUITY_UNIVERSE
