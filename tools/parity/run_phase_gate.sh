@@ -2,18 +2,26 @@
 # Run a full phase gate check: compile, push, backtest, fetch stats, compare.
 #
 # Usage:
-#   ./tools/parity/run_phase_gate.sh <phase_number> <phase_name>
-#   Example: ./tools/parity/run_phase_gate.sh 02 structure_atoms
+#   QC_PROJECT_NAME="<qc-project-name>" QC_PROJECT_ID="<qc-project-id>" \
+#     ./tools/parity/run_phase_gate.sh <phase_number> <phase_name>
+#   Example:
+#   QC_PROJECT_NAME="My QC Project" QC_PROJECT_ID="12345678" \
+#     ./tools/parity/run_phase_gate.sh 02 structure_atoms
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 PHASE_NUM="${1:?Usage: run_phase_gate.sh <phase_number> <phase_name>}"
 PHASE_NAME="${2:?Usage: run_phase_gate.sh <phase_number> <phase_name>}"
 
-PROJECT_DIR="/Users/graham/Documents/QuantConnect/MyProjects/WolfpackTrend 1"
+QC_ROOT_DIR="${QC_ROOT_DIR:-$HOME/Documents/QuantConnect}"
+QC_PROJECT_NAME="${QC_PROJECT_NAME:?Set QC_PROJECT_NAME to your QuantConnect project name}"
+QC_PROJECT_ID="${QC_PROJECT_ID:?Set QC_PROJECT_ID to your QuantConnect cloud-id}"
+
 PHASE_DIR="${PROJECT_DIR}/backtests/atomic_refactor/phase_${PHASE_NUM}_${PHASE_NAME}"
 BASELINE_SUMMARY="${PROJECT_DIR}/backtests/atomic_refactor/phase_00_baseline/metrics/summary.json"
-PROJECT_ID=27898063
 
 echo "=== Phase ${PHASE_NUM}: ${PHASE_NAME} ==="
 echo ""
@@ -43,12 +51,12 @@ echo ""
 
 # Step 3: Push and run cloud backtest
 echo ">>> Step 3: Push to cloud and run backtest"
-cd ~/Documents/QuantConnect
+cd "${QC_ROOT_DIR}"
 source venv/bin/activate
 cd MyProjects
-lean cloud push --project "WolfpackTrend 1" --force
+lean cloud push --project "${QC_PROJECT_NAME}" --force
 BACKTEST_NAME="Atomic-P${PHASE_NUM}-${PHASE_NAME}-$(date +%Y%m%d-%H%M%S)"
-OUTPUT=$(lean cloud backtest "WolfpackTrend 1" --name "${BACKTEST_NAME}" 2>&1)
+OUTPUT=$(lean cloud backtest "${QC_PROJECT_NAME}" --name "${BACKTEST_NAME}" 2>&1)
 echo "${OUTPUT}"
 
 # Extract backtest ID from output
@@ -64,7 +72,7 @@ echo ""
 echo ">>> Step 4: Fetch backtest statistics"
 cd "${PROJECT_DIR}"
 python tools/parity/fetch_backtest_stats.py \
-    --project-id ${PROJECT_ID} \
+    --project-id "${QC_PROJECT_ID}" \
     --backtest-id "${BACKTEST_ID}" \
     --output "${PHASE_DIR}/metrics/summary.json"
 echo ""

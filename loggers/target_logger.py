@@ -9,7 +9,8 @@ TARGET_COLUMNS = [
 
 
 class TargetLogger:
-    def __init__(self):
+    def __init__(self, team_id="production"):
+        self.team_id = team_id
         self.targets = []
 
     def log(self, algorithm, pcm, current_date):
@@ -36,5 +37,5 @@ class TargetLogger:
     def save(self, algorithm):
         if self.targets:
             csv_content = build_csv(self.targets, TARGET_COLUMNS)
-            algorithm.ObjectStore.Save("wolfpack/targets.csv", csv_content)
+            algorithm.ObjectStore.Save(f"{self.team_id}/targets.csv", csv_content)
         return len(self.targets)

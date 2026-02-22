@@ -3,7 +3,7 @@
 
 Usage:
     python tools/parity/fetch_backtest_stats.py \
-        --project-id 27898063 \
+        --project-id <qc-project-id> \
         --backtest-id <id> \
         --output backtests/atomic_refactor/phase_XX_name/metrics/summary.json
 """

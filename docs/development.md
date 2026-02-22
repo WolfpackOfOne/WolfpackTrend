@@ -24,8 +24,8 @@ The project lives in three independent systems that must be kept in sync:
 | System | Location | Purpose |
 |--------|----------|---------|
 | Local Git | `.git/` in project directory | Version control |
-| GitHub | `WolfpackOfOne/WolfpackTrend` | Remote backup, collaboration |
-| QC Cloud | WolfpackTrend 1 project | Backtest execution (full data) |
+| GitHub | `<your-org>/<your-repo>` | Remote backup, collaboration |
+| QC Cloud | `<qc-project-name>` project | Backtest execution (full data) |
 
 Git and QC Cloud are **independent**. Pushing to one does not update the other.
 
@@ -41,12 +41,12 @@ cd MyProjects
 
 ### 2. Make Changes
 
-Edit files in `WolfpackTrend 1/`. The composition root is `main.py`.
+Edit files in `<qc-project-dir>/`. The composition root is `main.py`.
 
 ### 3. Compile Check
 
 ```bash
-cd "WolfpackTrend 1"
+cd "<qc-project-dir>"
 python -m py_compile main.py
 for f in models/*.py core/*.py signals/*.py risk/*.py execution/*.py loggers/*.py; do
     python -m py_compile "$f"
@@ -59,8 +59,8 @@ done
 cd ~/Documents/QuantConnect
 source venv/bin/activate
 cd MyProjects
-lean cloud push --project "WolfpackTrend 1" --force
-lean cloud backtest "WolfpackTrend 1" --name "Description of run"
+lean cloud push --project "<qc-project-name>" --force
+lean cloud backtest "<qc-project-name>" --name "Description of run"
 ```
 
 Use `--force` if you get a collaboration lock error.
@@ -68,7 +68,7 @@ Use `--force` if you get a collaboration lock error.
 ### 5. Commit to Git
 
 ```bash
-cd "/Users/graham/Documents/QuantConnect/MyProjects/WolfpackTrend 1"
+cd "$HOME/Documents/QuantConnect/MyProjects/<qc-project-dir>"
 git add <files>
 git commit -m "Description of changes"
 git push
@@ -80,7 +80,7 @@ git push
 cd ~/Documents/QuantConnect
 source venv/bin/activate
 cd MyProjects
-lean cloud pull --project "WolfpackTrend 1"
+lean cloud pull --project "<qc-project-name>"
 ```
 
 ## Cloud vs Local Backtests

@@ -14,7 +14,7 @@ Fetches backtest statistics from the QuantConnect API.
 
 ```bash
 python tools/parity/fetch_backtest_stats.py \
-    --project-id 27898063 \
+    --project-id <qc-project-id> \
     --backtest-id <BACKTEST_ID> \
     --output backtests/atomic_refactor/phase_XX/metrics/summary.json
 ```
@@ -42,8 +42,10 @@ Modes:
 End-to-end convenience script for a full phase gate check.
 
 ```bash
+QC_PROJECT_NAME="<qc-project-name>" QC_PROJECT_ID="<qc-project-id>" \
 ./tools/parity/run_phase_gate.sh <phase_number> <phase_name>
 # Example:
+QC_PROJECT_NAME="<qc-project-name>" QC_PROJECT_ID="<qc-project-id>" \
 ./tools/parity/run_phase_gate.sh 07 execution_wiring
 ```
 
@@ -89,4 +91,4 @@ The fetch script authenticates using:
 - Timestamp-based SHA256 hash: `SHA256(apiToken + timestamp)`
 - Basic auth header: `base64(userId:hash)`
 
-Project ID: `27898063`
+Project ID: `<qc-project-id>`

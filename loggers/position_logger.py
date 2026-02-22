@@ -15,7 +15,8 @@ TRADE_COLUMNS = [
 
 
 class PositionLogger:
-    def __init__(self):
+    def __init__(self, team_id="production"):
+        self.team_id = team_id
         self.positions = []
         self.trades = []
         self.prev_positions = {}
@@ -118,8 +119,8 @@ class PositionLogger:
         trade_count = len(self.trades)
         if self.positions:
             csv_content = build_csv(self.positions, POSITION_COLUMNS)
-            algorithm.ObjectStore.Save("wolfpack/positions.csv", csv_content)
+            algorithm.ObjectStore.Save(f"{self.team_id}/positions.csv", csv_content)
         if self.trades:
             csv_content = build_csv(self.trades, TRADE_COLUMNS)
-            algorithm.ObjectStore.Save("wolfpack/trades.csv", csv_content)
+            algorithm.ObjectStore.Save(f"{self.team_id}/trades.csv", csv_content)
         return pos_count, trade_count

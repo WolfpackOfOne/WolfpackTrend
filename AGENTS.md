@@ -6,7 +6,7 @@ This file defines repository-specific instructions for coding agents working in 
 - Strategy: modular trend-following equity strategy built on LEAN.
 - Universe: static ticker list in `models/universe.py` (`EQUITY_UNIVERSE`, currently 30 names).
 - Entrypoint: `main.py` (`WolfpackTrendAlgorithm`).
-- Lean engine path: `/Users/graham/Documents/QuantConnect/Lean/Algorithm`.
+- Lean engine path: `$HOME/Documents/QuantConnect/Lean/Algorithm`.
 
 ## Architecture
 - `main.py`: algorithm setup, model wiring, scheduled stale-order cancellation, event logging.
@@ -55,14 +55,14 @@ Use QuantConnect cloud for authoritative backtests.
 cd ~/Documents/QuantConnect
 source venv/bin/activate
 cd MyProjects
-lean cloud push --project "WolfpackTrend 1" --force
-lean cloud backtest "WolfpackTrend 1" --name "<run name>"
+lean cloud push --project "<qc-project-name>" --force
+lean cloud backtest "<qc-project-name>" --name "<run name>"
 ```
 
 If needed, sync from cloud:
 
 ```bash
-lean cloud pull --project "WolfpackTrend 1"
+lean cloud pull --project "<qc-project-name>"
 ```
 
 ## Verification Expectations
@@ -75,7 +75,7 @@ python -m py_compile main.py models/*.py
 Then provide a cloud backtest command (or run one if requested).
 
 ## Git And File Hygiene
-- Repo: `https://github.com/WolfpackOfOne/WolfpackTrend.git` (branch `main`).
+- Repo: `https://github.com/<your-org>/<your-repo>.git` (branch `main`).
 - Do not commit secrets or environment-specific artifacts.
 - Keep `config.json`, `backtests/`, `live/`, `.lean/`, and cache/log artifacts untracked.
 - Prefer focused commits that align with one logical strategy or infrastructure change.

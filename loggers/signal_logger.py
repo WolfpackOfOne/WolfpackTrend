@@ -9,7 +9,8 @@ SIGNAL_COLUMNS = [
 
 
 class SignalLogger:
-    def __init__(self):
+    def __init__(self, team_id="production"):
+        self.team_id = team_id
         self.signals = []
 
     def log(self, date, symbol, direction, magnitude, price,
@@ -29,5 +30,5 @@ class SignalLogger:
     def save(self, algorithm):
         if self.signals:
             csv_content = build_csv(self.signals, SIGNAL_COLUMNS)
-            algorithm.ObjectStore.Save("wolfpack/signals.csv", csv_content)
+            algorithm.ObjectStore.Save(f"{self.team_id}/signals.csv", csv_content)
         return len(self.signals)

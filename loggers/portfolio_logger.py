@@ -19,13 +19,14 @@ class PortfolioLogger:
     Stores: daily snapshots, positions, signals, slippage, trades, targets, order events.
     """
 
-    def __init__(self):
-        self._snapshot_logger = SnapshotLogger()
-        self._position_logger = PositionLogger()
-        self._signal_logger = SignalLogger()
-        self._slippage_logger = SlippageLogger()
-        self._order_event_logger = OrderEventLogger()
-        self._target_logger = TargetLogger()
+    def __init__(self, team_id="production"):
+        self.team_id = team_id
+        self._snapshot_logger = SnapshotLogger(team_id=team_id)
+        self._position_logger = PositionLogger(team_id=team_id)
+        self._signal_logger = SignalLogger(team_id=team_id)
+        self._slippage_logger = SlippageLogger(team_id=team_id)
+        self._order_event_logger = OrderEventLogger(team_id=team_id)
+        self._target_logger = TargetLogger(team_id=team_id)
 
         # Track previous NAV for daily P&L
         self.prev_nav: Optional[float] = None

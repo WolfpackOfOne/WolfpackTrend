@@ -34,7 +34,7 @@ WolfpackTrend uses a layered architecture built on QuantConnect's LEAN framework
 ## Directory Map
 
 ```
-WolfpackTrend 1/
+<qc-project-dir>/
 ├── main.py                     # Algorithm entrypoint (QCAlgorithm subclass)
 ├── models/                     # Compatibility adapters (thin re-exports)
 │   ├── __init__.py             # Exports: EQUITY_UNIVERSE, all model classes

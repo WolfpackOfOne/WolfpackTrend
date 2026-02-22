@@ -8,7 +8,7 @@ This folder is a focused workflow for portfolio exposure and concentration risk.
 3. `03_exposure_regime_dashboard.ipynb`
 
 ## Data required
-- `wolfpack/positions.csv`
-- `wolfpack/daily_snapshots.csv`
+- `{TEAM_ID}/positions.csv`
+- `{TEAM_ID}/daily_snapshots.csv`
 
 Run a fresh backtest first so ObjectStore contains current logs.

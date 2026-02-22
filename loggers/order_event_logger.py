@@ -10,7 +10,8 @@ ORDER_EVENT_COLUMNS = [
 
 
 class OrderEventLogger:
-    def __init__(self):
+    def __init__(self, team_id="production"):
+        self.team_id = team_id
         self.order_events = []
 
     def log(self, date, order_id, symbol, status, direction, quantity,
@@ -34,5 +35,5 @@ class OrderEventLogger:
     def save(self, algorithm):
         if self.order_events:
             csv_content = build_csv(self.order_events, ORDER_EVENT_COLUMNS)
-            algorithm.ObjectStore.Save("wolfpack/order_events.csv", csv_content)
+            algorithm.ObjectStore.Save(f"{self.team_id}/order_events.csv", csv_content)
         return len(self.order_events)

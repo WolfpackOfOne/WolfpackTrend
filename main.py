@@ -1,5 +1,6 @@
 from AlgorithmImports import *
 from models import EQUITY_UNIVERSE, CompositeTrendAlphaModel, TargetVolPortfolioConstructionModel, SignalStrengthExecutionModel, PortfolioLogger
+from config import TEAM_ID
 
 
 class WolfpackTrendAlgorithm(QCAlgorithm):
@@ -33,28 +34,23 @@ class WolfpackTrendAlgorithm(QCAlgorithm):
             self.AddEquity(ticker, Resolution.Daily)
 
         # Initialize logger for portfolio tracking
-        self.logger = PortfolioLogger()
+        self.logger = PortfolioLogger(team_id=TEAM_ID)
 
         # Clear ObjectStore to remove stale files from previous runs
-        if self.ObjectStore.ContainsKey("wolfpack/daily_snapshots.csv"):
-            self.ObjectStore.Delete("wolfpack/daily_snapshots.csv")
-        if self.ObjectStore.ContainsKey("wolfpack/positions.csv"):
-            self.ObjectStore.Delete("wolfpack/positions.csv")
-        if self.ObjectStore.ContainsKey("wolfpack/trades.csv"):
-            self.ObjectStore.Delete("wolfpack/trades.csv")
-        if self.ObjectStore.ContainsKey("wolfpack/signals.csv"):
-            self.ObjectStore.Delete("wolfpack/signals.csv")
-        if self.ObjectStore.ContainsKey("wolfpack/slippage.csv"):
-            self.ObjectStore.Delete("wolfpack/slippage.csv")
-        if self.ObjectStore.ContainsKey("wolfpack/targets.csv"):
-            self.ObjectStore.Delete("wolfpack/targets.csv")
-        if self.ObjectStore.ContainsKey("wolfpack/order_events.csv"):
-            self.ObjectStore.Delete("wolfpack/order_events.csv")
-        self.Debug("ObjectStore: Cleared previous wolfpack data files")
+        _csv_files = [
+            "daily_snapshots.csv", "positions.csv", "trades.csv",
+            "signals.csv", "slippage.csv", "targets.csv", "order_events.csv"
+        ]
+        for _f in _csv_files:
+            _key = f"{TEAM_ID}/{_f}"
+            if self.ObjectStore.ContainsKey(_key):
+                self.ObjectStore.Delete(_key)
+        self.Debug(f"ObjectStore: Cleared previous {TEAM_ID}/ data files")
 
         # Log initialization
         self.Debug("=" * 60)
         self.Debug("WOLFPACK TREND STRATEGY INITIALIZED")
+        self.Debug(f"Team: {TEAM_ID}")
         self.Debug(f"Period: {self.StartDate.strftime('%Y-%m-%d')} to {self.EndDate.strftime('%Y-%m-%d')}")
         self.Debug(f"Starting Cash: ${self.Portfolio.Cash:,.0f}")
         self.Debug(f"Universe: {len(EQUITY_UNIVERSE)} stocks")

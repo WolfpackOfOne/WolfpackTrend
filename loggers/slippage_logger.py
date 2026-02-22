@@ -9,7 +9,8 @@ SLIPPAGE_COLUMNS = [
 
 
 class SlippageLogger:
-    def __init__(self):
+    def __init__(self, team_id="production"):
+        self.team_id = team_id
         self.slippage = []
         self.daily_slippage = 0.0
         self.last_slippage_date = None
@@ -42,5 +43,5 @@ class SlippageLogger:
     def save(self, algorithm):
         if self.slippage:
             csv_content = build_csv(self.slippage, SLIPPAGE_COLUMNS)
-            algorithm.ObjectStore.Save("wolfpack/slippage.csv", csv_content)
+            algorithm.ObjectStore.Save(f"{self.team_id}/slippage.csv", csv_content)
         return len(self.slippage)

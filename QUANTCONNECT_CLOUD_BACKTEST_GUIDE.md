@@ -25,8 +25,8 @@ Read the local project's `config.json` to get the cloud project ID:
 
 ```json
 {
-    "cloud-id": 27898063,  // This is the QuantConnect project ID
-    "organization-id": "6bb227569e013a468ab7fbf745e257fe"
+    "cloud-id": 12345678,  // Replace with your QuantConnect project ID
+    "organization-id": "your-organization-id"
 }
 ```
 
@@ -39,7 +39,7 @@ mcp__Claude_in_Chrome__navigate
 url: https://www.quantconnect.com/project/{cloud-id}
 ```
 
-Example: `https://www.quantconnect.com/project/27898063`
+Example: `https://www.quantconnect.com/project/{cloud-id}`
 
 ### 4. Handle Organization Switching
 
@@ -150,7 +150,7 @@ Once complete, the results page shows:
 tabs_context_mcp(createIfEmpty=True)
 
 # 2. Navigate to project
-navigate(tabId=tab_id, url="https://www.quantconnect.com/project/27898063")
+navigate(tabId=tab_id, url="https://www.quantconnect.com/project/{cloud-id}")
 
 # 3. Wait for load
 sleep(3)

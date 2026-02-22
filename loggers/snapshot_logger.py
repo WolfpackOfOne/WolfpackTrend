@@ -10,7 +10,8 @@ SNAPSHOT_COLUMNS = [
 
 
 class SnapshotLogger:
-    def __init__(self):
+    def __init__(self, team_id="production"):
+        self.team_id = team_id
         self.snapshots = []
 
     def log(self, row):
@@ -19,5 +20,5 @@ class SnapshotLogger:
     def save(self, algorithm):
         if self.snapshots:
             csv_content = build_csv(self.snapshots, SNAPSHOT_COLUMNS)
-            algorithm.ObjectStore.Save("wolfpack/daily_snapshots.csv", csv_content)
+            algorithm.ObjectStore.Save(f"{self.team_id}/daily_snapshots.csv", csv_content)
         return len(self.snapshots)
