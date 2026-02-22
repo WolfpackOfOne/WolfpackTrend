@@ -1,2 +1,1 @@
-"""Compatibility adapter - re-exports from risk domain."""
 from risk.portfolio import TargetVolPortfolioConstructionModel

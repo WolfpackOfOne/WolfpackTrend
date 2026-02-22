@@ -1,4 +1,4 @@
-# WolfpackTrend - Dow 30 Trend-Following Strategy
+# WolfpackTrend - Trend-Following Strategy
 
 ## Repository
 - **GitHub URL:** https://github.com/WolfpackOfOne/WolfpackTrend.git
@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-A modular trend-following strategy using the Dow 30 stocks, implemented with LEAN's framework architecture:
+A modular trend-following strategy implemented with LEAN's framework architecture. The universe is defined as a static ticker list in `models/universe.py` (currently the DOW30 variable, 30 tickers):
 
 - **Alpha Model**: Composite trend signals from 3 horizons (20/63/252 day SMAs), normalized by ATR
 - **Portfolio Construction**: Targets 10% annualized volatility with exposure constraints
@@ -22,7 +22,7 @@ WolfpackTrend 1/
 ├── config.json             # QC cloud project config (DO NOT COMMIT)
 ├── models/
 │   ├── __init__.py         # Exports all models
-│   ├── universe.py         # DOW30 tickers list
+│   ├── universe.py         # Static ticker universe (edit to change stock basket)
 │   ├── alpha.py            # CompositeTrendAlphaModel
 │   ├── portfolio.py        # TargetVolPortfolioConstructionModel
 │   ├── execution.py        # SignalStrengthExecutionModel
@@ -41,6 +41,7 @@ WolfpackTrend 1/
 | SMA Long | 252 days | Long-term trend |
 | ATR Period | 14 days | Volatility normalization |
 | Signal Weights | 0.2/0.5/0.3 | Short/Medium/Long |
+| Signal Temperature | 3.0 | Divisor before tanh — controls signal sensitivity |
 | Min Signal | 0.05 | Skip signals below this magnitude |
 | Rebalance Interval | 5 trading days | Full signal recalculation frequency |
 
@@ -64,7 +65,8 @@ WolfpackTrend 1/
 | Moderate Offset | 0.5% | Limit offset for moderate signals |
 | Weak Offset | 1.5% | Limit offset for weak signals |
 | Default Signal | 0.50 | Fallback for unknown symbols |
-| Stale Limit Open Checks | 2 | Cancel an unfilled limit after 2 market-open checks |
+| Stale Cancellation | week_id cycle | Cancel unfilled limits from previous rebalance cycle |
+| Legacy Fallback Checks | 2 | Cancel after 2 market-open checks when week_id unavailable |
 
 ### Scaling Schedules (Signal-Dependent)
 
@@ -122,6 +124,9 @@ The strategy logs daily metrics to ObjectStore for research analysis:
 | `wolfpack/positions.csv` | All positions daily (~15k rows for 2 years) |
 | `wolfpack/signals.csv` | Alpha signals with indicator values |
 | `wolfpack/slippage.csv` | Per-order slippage (expected vs fill price) |
+| `wolfpack/trades.csv` | Realized P&L from closed positions |
+| `wolfpack/targets.csv` | Daily per-symbol target-state (scaling progress) |
+| `wolfpack/order_events.csv` | Full order lifecycle events (submitted, filled, canceled) |
 
 ### Reading in Research Notebook
 ```python
@@ -143,6 +148,18 @@ df_signals = pd.read_csv(StringIO(signals_str), parse_dates=['date'])
 # Read slippage
 slippage_str = qb.ObjectStore.Read("wolfpack/slippage.csv")
 df_slippage = pd.read_csv(StringIO(slippage_str), parse_dates=['date'])
+
+# Read trades (closed positions)
+trades_str = qb.ObjectStore.Read("wolfpack/trades.csv")
+df_trades = pd.read_csv(StringIO(trades_str), parse_dates=['date'])
+
+# Read daily target state
+targets_str = qb.ObjectStore.Read("wolfpack/targets.csv")
+df_targets = pd.read_csv(StringIO(targets_str), parse_dates=['date'])
+
+# Read order events
+events_str = qb.ObjectStore.Read("wolfpack/order_events.csv")
+df_events = pd.read_csv(StringIO(events_str), parse_dates=['date'])
 ```
 
 ### Daily Snapshots Columns
@@ -176,6 +193,40 @@ df_slippage = pd.read_csv(StringIO(slippage_str), parse_dates=['date'])
 - `daily_total_net_pnl` - Daily realized + unrealized − fees
 - `avg_price` - Average entry price
 
+### Trades Columns
+- `date` - Trading date of close
+- `symbol` - Ticker symbol
+- `action` - Always "CLOSE"
+- `quantity` - Position quantity at close
+- `avg_price` - Average entry price
+- `exit_price` - Price at close
+- `realized_pnl` - Approximate realized P&L
+
+### Targets Columns
+- `date` - Trading date
+- `week_id` - Rebalance date (YYYY-MM-DD) identifying the cycle
+- `symbol` - Ticker symbol
+- `start_w` - Portfolio weight at start of rebalance cycle
+- `weekly_target_w` - Final target weight for the cycle
+- `scheduled_fraction` - Cumulative scaling fraction for today (0.0–1.0)
+- `scheduled_w` - Scheduled weight for today (weekly_target_w * scheduled_fraction)
+- `actual_w` - Actual portfolio weight
+- `scale_day` - Current scaling day (0-indexed)
+
+### Order Events Columns
+- `date` - Event date
+- `order_id` - LEAN order ID
+- `symbol` - Ticker symbol
+- `status` - Order status (Submitted, Filled, Canceled, etc.)
+- `direction` - Buy or Sell
+- `quantity` - Ordered quantity
+- `fill_quantity` - Filled quantity (for this event)
+- `fill_price` - Fill price (if filled)
+- `order_type` - Market or Limit
+- `limit_price` - Limit price (if limit order)
+- `market_price_at_submit` - Market price when order was submitted
+- `tag` - Order tag with execution metadata (tier, signal, week_id, scale_day)
+
 ## Backtest Configuration
 
 Current settings in `main.py`:
@@ -187,13 +238,13 @@ Current settings in `main.py`:
 
 ## Key Implementation Notes
 
-1. **Signal Generation**: Signals are computed every 5 trading days using `tanh(composite_score)` for smooth bounded magnitude in (-1, +1). **All three trend horizons (short/medium/long) must agree in direction** - if price is above all three SMAs or below all three SMAs, a signal is generated; otherwise the symbol is skipped. Cached signals are re-emitted daily to drive the scaling pipeline.
+1. **Signal Generation**: Signals are computed every 5 trading days using `tanh(composite_score / temperature)` with temperature=3.0 for smooth bounded magnitude in (-1, +1). **All three trend horizons (short/medium/long) must agree in direction** - if price is above all three SMAs or below all three SMAs, a signal is generated; otherwise the symbol is skipped. Cached signals are re-emitted daily to drive the scaling pipeline.
 
 2. **Daily Scaling**: Alpha emits daily (fresh or cached), PCM scales targets from 0% to 100% over 5 trading days. Strong signals scale faster (front-loaded), weak signals scale linearly.
 
 3. **Signal-Strength Execution**: Strong signals (>=0.7) get limit orders at market price (0% offset). Moderate (0.3-0.7) get limit orders at 0.5% offset. Weak (<0.3) get limit orders at 1.5% offset. Exits always use market orders.
 
-4. **Stale Order Cancellation**: Unfilled limit orders are reviewed via `Schedule.On` at market open; each order is cancelled only after 2 market-open checks so daily bars have time to fill.
+4. **Stale Order Cancellation**: Signal-aware cancellation using `week_id` (rebalance date). Orders from previous rebalance cycles are cancelled at market open via `Schedule.On`, allowing the full 5-day scaling window for current-cycle orders. Orders carry a `week_id` tag set at submission; only orders with a `week_id` older than the current cycle are cancelled. Falls back to legacy 2-check behavior when `week_id` tracking is unavailable. The PCM also runs a backup cancellation pass inside the pipeline to prevent duplicates.
 
 5. **Volatility Targeting**: Uses diagonal approximation (ignores correlations) with 63-day rolling returns
 
@@ -295,3 +346,19 @@ Three separate systems to keep in sync:
 | QC Cloud | WolfpackTrend 1 project | `lean cloud push/pull` |
 
 **Important:** Git and QC cloud are independent. Sync both if you want changes everywhere.
+
+### Auto-Update Memory (MANDATORY)
+
+**Update memory files AS YOU GO, not at the end.** When you learn something new, update immediately.
+
+| Trigger | Action |
+|---------|--------|
+| User shares a fact about themselves | → Update `memory-profile.md` |
+| User states a preference | → Update `memory-preferences.md` |
+| A decision is made | → Update `memory-decisions.md` with date |
+| Completing substantive work | → Add to `memory-sessions.md` |
+
+**Skip:** Quick factual questions, trivial tasks with no new info.
+
+**DO NOT ASK. Just update the files when you learn something.**
+

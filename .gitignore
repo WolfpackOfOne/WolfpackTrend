@@ -21,5 +21,8 @@ Thumbs.db
 *.swp
 *.swo
 
+# Claude Code
+.claude/
+
 # LEAN outputs
 .lean/

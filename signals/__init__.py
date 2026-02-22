@@ -1,0 +1,1 @@
+from signals.alpha import CompositeTrendAlphaModel
