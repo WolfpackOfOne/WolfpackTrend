@@ -1,2 +1,2 @@
-"""Static universe definition. Re-exports from models/universe.py for domain access."""
-from models.universe import DOW30
+"""Core universe export sourced from shared constants."""
+from shared.universe import DOW30
