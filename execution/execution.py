@@ -27,7 +27,8 @@ class SignalStrengthExecutionModel(ExecutionModel):
                  moderate_offset_pct=0.005,
                  weak_offset_pct=0.015,
                  default_signal_strength=0.50,
-                 limit_cancel_after_open_checks=2):
+                 limit_cancel_after_open_checks=2,
+                 portfolio_model=None):
         self.strong_threshold = strong_threshold
         self.moderate_threshold = moderate_threshold
         self.strong_offset_pct = strong_offset_pct
@@ -35,6 +36,7 @@ class SignalStrengthExecutionModel(ExecutionModel):
         self.weak_offset_pct = weak_offset_pct
         self.default_signal_strength = default_signal_strength
         self.limit_cancel_after_open_checks = max(1, int(limit_cancel_after_open_checks))
+        self.portfolio_model = portfolio_model
 
         self.targets_collection = PortfolioTargetCollection()
         self.open_limit_tickets = []
@@ -67,9 +69,19 @@ class SignalStrengthExecutionModel(ExecutionModel):
             signal_strength = self._get_signal_strength(algorithm, symbol)
 
             tick_size = security.SymbolProperties.MinimumPriceVariation
-            pcm = getattr(algorithm, 'pcm', None)
-            week_id_val = getattr(pcm, 'current_week_id', '') if pcm is not None else ''
-            scale_day_val = getattr(pcm, 'current_scale_day', '') if pcm is not None else ''
+            pcm = self._get_portfolio_model(algorithm)
+            week_id_val = getattr(pcm, 'current_week_id', None) if pcm is not None else None
+            if not week_id_val:
+                # Keep week-aware tags populated even if external wiring is unavailable.
+                week_id_val = algorithm.Time.strftime('%Y-%m-%d')
+                if pcm is not None:
+                    pcm.current_week_id = week_id_val
+
+            scale_day_val = getattr(pcm, 'current_scale_day', None) if pcm is not None else None
+            try:
+                scale_day_val = int(scale_day_val)
+            except (TypeError, ValueError):
+                scale_day_val = 0
 
             if is_exit:
                 tier = "exit"
@@ -118,7 +130,7 @@ class SignalStrengthExecutionModel(ExecutionModel):
 
     def cancel_stale_orders(self, algorithm):
         """Cancel limit orders from PREVIOUS rebalance cycles only."""
-        pcm = getattr(algorithm, 'pcm', None)
+        pcm = self._get_portfolio_model(algorithm)
         current_week_id = getattr(pcm, 'current_week_id', None) if pcm is not None else None
 
         if not current_week_id:
@@ -213,8 +225,13 @@ class SignalStrengthExecutionModel(ExecutionModel):
                 self.order_week_ids.pop(order_id, None)
 
     def _get_signal_strength(self, algorithm, symbol):
-        pcm = getattr(algorithm, 'pcm', None)
+        pcm = self._get_portfolio_model(algorithm)
         if pcm is None:
             return self.default_signal_strength
         strengths = getattr(pcm, 'signal_strengths', {})
         return strengths.get(symbol, self.default_signal_strength)
+
+    def _get_portfolio_model(self, algorithm):
+        if self.portfolio_model is not None:
+            return self.portfolio_model
+        return getattr(algorithm, 'pcm', None)

@@ -89,7 +89,8 @@ class WolfpackTrendAlgorithm(QCAlgorithm):
             moderate_offset_pct=0.005,
             weak_offset_pct=0.015,
             default_signal_strength=0.50,
-            limit_cancel_after_open_checks=2
+            limit_cancel_after_open_checks=2,
+            portfolio_model=self.pcm
         )
         self.SetExecution(self.execution_model)
         self.Debug(
