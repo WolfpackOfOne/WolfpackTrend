@@ -4,7 +4,8 @@ from core.formatting import build_csv
 
 TARGET_COLUMNS = [
     'date', 'week_id', 'symbol', 'start_w', 'weekly_target_w',
-    'scheduled_fraction', 'scheduled_w', 'actual_w', 'scale_day'
+    'scheduled_fraction', 'scheduled_w', 'actual_w', 'scale_day',
+    'is_scaling', 'classification'
 ]
 
 
@@ -31,7 +32,9 @@ class TargetLogger:
                 'scheduled_fraction': row.get('scheduled_fraction', ''),
                 'scheduled_w': row.get('scheduled_w', ''),
                 'actual_w': row.get('actual_w', ''),
-                'scale_day': row.get('scale_day', '')
+                'scale_day': row.get('scale_day', ''),
+                'is_scaling': row.get('is_scaling', ''),
+                'classification': row.get('classification', ''),
             })
 
     def save(self, algorithm):

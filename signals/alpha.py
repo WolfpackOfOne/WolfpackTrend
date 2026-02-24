@@ -5,6 +5,11 @@ Wraps the trend molecule with LEAN framework integration.
 from datetime import timedelta
 from AlgorithmImports import *
 from core.math_utils import compute_composite_signal
+from config import (
+    ALPHA_SIGNAL_WEIGHTS,
+    ALPHA_SIGNAL_TEMPERATURE,
+    ALPHA_MIN_MAGNITUDE,
+)
 
 
 class CompositeTrendAlphaModel(AlphaModel):
@@ -20,8 +25,10 @@ class CompositeTrendAlphaModel(AlphaModel):
 
     def __init__(self, short_period=20, medium_period=63, long_period=252,
                  atr_period=14, rebalance_interval_trading_days=5,
-                 signal_temperature=3.0,
-                 logger=None, algorithm=None):
+                 signal_temperature=ALPHA_SIGNAL_TEMPERATURE,
+                 logger=None, algorithm=None,
+                 signal_weights=ALPHA_SIGNAL_WEIGHTS,
+                 min_magnitude=ALPHA_MIN_MAGNITUDE):
         self.short_period = short_period
         self.medium_period = medium_period
         self.long_period = long_period
@@ -30,12 +37,14 @@ class CompositeTrendAlphaModel(AlphaModel):
         self.signal_temperature = max(1e-6, float(signal_temperature))
 
         # Weights for composite score
-        self.weight_short = 0.2
-        self.weight_medium = 0.5
-        self.weight_long = 0.3
+        if signal_weights is None or len(signal_weights) != 3:
+            raise ValueError("signal_weights must be a 3-item iterable (short, medium, long)")
+        self.weight_short = float(signal_weights[0])
+        self.weight_medium = float(signal_weights[1])
+        self.weight_long = float(signal_weights[2])
 
         # Minimum magnitude threshold to emit insight
-        self.min_magnitude = 0.05
+        self.min_magnitude = max(0.0, float(min_magnitude))
 
         # Indicators keyed by symbol
         self.sma_short = {}
@@ -85,7 +94,7 @@ class CompositeTrendAlphaModel(AlphaModel):
             is_rebalance = True
 
         if is_rebalance:
-            self.trading_days_since_rebalance = 0
+            self.trading_days_since_rebalance = 1
             self.cached_signals = {}
             self._compute_signals(algorithm, data)
             pcm = getattr(algorithm, 'pcm', None)

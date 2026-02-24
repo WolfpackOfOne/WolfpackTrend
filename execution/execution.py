@@ -38,19 +38,24 @@ class SignalStrengthExecutionModel(ExecutionModel):
         self.limit_cancel_after_open_checks = max(1, int(limit_cancel_after_open_checks))
         self.portfolio_model = portfolio_model
 
-        self.targets_collection = PortfolioTargetCollection()
         self.open_limit_tickets = []
         self.limit_open_checks = {}
         self.market_price_at_submit = {}
         self.order_week_ids = {}
 
     def Execute(self, algorithm, targets):
-        self.targets_collection.AddRange(targets)
-
-        if self.targets_collection.IsEmpty:
+        if not targets:
             return
 
-        for target in self.targets_collection.OrderByMarginImpact(algorithm):
+        # Process only the targets emitted in this pipeline call.
+        # Keeping stale targets across days can keep generating orders even when
+        # the PCM intentionally stops emitting for steady-state symbols.
+        target_collection = PortfolioTargetCollection()
+        target_collection.AddRange(targets)
+        if target_collection.IsEmpty:
+            return
+
+        for target in target_collection.OrderByMarginImpact(algorithm):
             symbol = target.Symbol
             security = algorithm.Securities[symbol]
 
@@ -77,10 +82,10 @@ class SignalStrengthExecutionModel(ExecutionModel):
                 if pcm is not None:
                     pcm.current_week_id = week_id_val
 
-            scale_day_val = getattr(pcm, 'current_scale_day', None) if pcm is not None else None
-            try:
-                scale_day_val = int(scale_day_val)
-            except (TypeError, ValueError):
+            if pcm is not None:
+                symbol_state = getattr(pcm, 'symbol_scale_state', {}).get(symbol, {})
+                scale_day_val = symbol_state.get("scale_day", 0)
+            else:
                 scale_day_val = 0
 
             if is_exit:
@@ -125,8 +130,6 @@ class SignalStrengthExecutionModel(ExecutionModel):
                     wid = extract_week_id_from_tag(tag)
                     if wid:
                         self.order_week_ids[ticket.OrderId] = wid
-
-        self.targets_collection.ClearFulfilled(algorithm)
 
     def cancel_stale_orders(self, algorithm):
         """Cancel limit orders from PREVIOUS rebalance cycles only."""

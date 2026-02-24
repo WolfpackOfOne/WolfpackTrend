@@ -17,3 +17,12 @@
 #   "team_7"      - Team 7
 # -------------------------------------------------------
 TEAM_ID = "production"
+
+# -------------------------------------------------------
+# Shared signal parameters (single source of truth)
+# -------------------------------------------------------
+# Keep alpha model and research notebooks aligned by
+# importing these values instead of hard-coding them.
+ALPHA_SIGNAL_WEIGHTS = (0.2, 0.5, 0.3)  # short / medium / long
+ALPHA_SIGNAL_TEMPERATURE = 3.0
+ALPHA_MIN_MAGNITUDE = 0.05

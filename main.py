@@ -1,6 +1,11 @@
 from AlgorithmImports import *
 from models import EQUITY_UNIVERSE, CompositeTrendAlphaModel, TargetVolPortfolioConstructionModel, SignalStrengthExecutionModel, PortfolioLogger
-from config import TEAM_ID
+from config import (
+    TEAM_ID,
+    ALPHA_SIGNAL_WEIGHTS,
+    ALPHA_SIGNAL_TEMPERATURE,
+    ALPHA_MIN_MAGNITUDE,
+)
 
 
 class WolfpackTrendAlgorithm(QCAlgorithm):
@@ -29,9 +34,10 @@ class WolfpackTrendAlgorithm(QCAlgorithm):
         # Warmup for SMA(252)
         self.SetWarmUp(252, Resolution.Daily)
 
-        # Add equity universe
+        # Add equity universe with zero commissions
         for ticker in EQUITY_UNIVERSE:
-            self.AddEquity(ticker, Resolution.Daily)
+            equity = self.AddEquity(ticker, Resolution.Daily)
+            equity.SetFeeModel(ConstantFeeModel(0))
 
         # Initialize logger for portfolio tracking
         self.logger = PortfolioLogger(team_id=TEAM_ID)
@@ -65,7 +71,8 @@ class WolfpackTrendAlgorithm(QCAlgorithm):
             vol_lookback=63,
             scaling_days=5,
             rebalance_interval_trading_days=5,
-            algorithm=self
+            algorithm=self,
+            rebalance_dead_band=0.015,
         )
         self.SetPortfolioConstruction(self.pcm)
         self.Debug(f"PCM: Target Vol 10%, Max Gross 150%, Max Net 50%, Max Weight 10%, Scaling 5 days")
@@ -77,11 +84,17 @@ class WolfpackTrendAlgorithm(QCAlgorithm):
             long_period=252,
             atr_period=14,
             rebalance_interval_trading_days=5,
-            signal_temperature=3.0,
+            signal_temperature=ALPHA_SIGNAL_TEMPERATURE,
+            signal_weights=ALPHA_SIGNAL_WEIGHTS,
+            min_magnitude=ALPHA_MIN_MAGNITUDE,
             logger=self.logger,
             algorithm=self
         ))
-        self.Debug("Alpha: Composite Trend (SMA 20/63/252, ATR 14, weekly rebalance, daily emission, temp=3.0)")
+        self.Debug(
+            "Alpha: Composite Trend "
+            f"(SMA 20/63/252, ATR 14, weekly rebalance, daily emission, "
+            f"weights={ALPHA_SIGNAL_WEIGHTS}, temp={ALPHA_SIGNAL_TEMPERATURE})"
+        )
 
         self.execution_model = SignalStrengthExecutionModel(
             strong_threshold=0.70,

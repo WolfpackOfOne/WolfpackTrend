@@ -3,6 +3,11 @@
 All strategy parameters are defined here for reference and documentation.
 main.py remains the composition root that uses these values.
 """
+from config import (
+    ALPHA_SIGNAL_WEIGHTS,
+    ALPHA_SIGNAL_TEMPERATURE,
+    ALPHA_MIN_MAGNITUDE,
+)
 
 # --- Signal Generation (Alpha Model) ---
 ALPHA = {
@@ -10,9 +15,9 @@ ALPHA = {
     'medium_period': 63,
     'long_period': 252,
     'atr_period': 14,
-    'signal_weights': (0.2, 0.5, 0.3),  # short/medium/long
-    'signal_temperature': 3.0,
-    'min_magnitude': 0.05,
+    'signal_weights': ALPHA_SIGNAL_WEIGHTS,  # short/medium/long
+    'signal_temperature': ALPHA_SIGNAL_TEMPERATURE,
+    'min_magnitude': ALPHA_MIN_MAGNITUDE,
     'rebalance_interval_trading_days': 5,
 }
 
