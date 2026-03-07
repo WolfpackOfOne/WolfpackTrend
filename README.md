@@ -29,6 +29,10 @@ lean login; lean cloud pull --project "<qc-project-name>"; lean cloud backtest "
 - `main.py`: algorithm composition root (`WolfpackTrendAlgorithm`)
 - `models/`: framework-facing model adapters
 - `core/`, `signals/`, `risk/`, `execution/`, `loggers/`: domain modules
+- `shared/`: shared utilities (universe definitions)
+- `templates/`: strategy configuration templates
+- `tools/`: developer utilities (parity comparison)
+- `research/`: Jupyter notebooks for analysis
 - `docs/`: architecture, strategy, development, parity, and ObjectStore docs
 
 ## Prerequisites
@@ -115,7 +119,10 @@ lean cloud push --project "<qc-project-name>" --force
 ## 6. Run Local Validation
 
 ```bash
-python -m py_compile main.py models/*.py
+python -m py_compile main.py
+for f in models/*.py core/*.py signals/*.py risk/*.py execution/*.py loggers/*.py shared/*.py templates/*.py; do
+    python -m py_compile "$f"
+done
 ```
 
 ## 7. Run a Cloud Backtest
@@ -134,7 +141,10 @@ source venv/bin/activate
 cd MyProjects/"<qc-project-dir>"
 
 # edit code
-python -m py_compile main.py models/*.py
+python -m py_compile main.py
+for f in models/*.py core/*.py signals/*.py risk/*.py execution/*.py loggers/*.py shared/*.py templates/*.py; do
+    python -m py_compile "$f"
+done
 lean cloud push --project "<qc-project-name>" --force
 lean cloud backtest "<qc-project-name>" --name "Update description"
 ```
@@ -147,8 +157,68 @@ The repository ignores environment-specific artifacts such as:
 - `backtests/`
 - `live/`
 - `.lean/`
+- `.claude/`
 - `__pycache__/`
 - `claude.md`
+
+## Algorithm Flow
+
+```mermaid
+flowchart TD
+    subgraph INIT["Initialize"]
+        A[30 DJIA Stocks<br/>Daily Resolution] --> B[252-Day Warmup]
+        B --> C[Wire Alpha → PCM → Execution]
+    end
+
+    subgraph DAILY["Every Trading Day"]
+        D[Market Open] --> E[Cancel Stale Orders]
+        E --> F[OnData]
+        F --> G[Update 63-Day<br/>Rolling Returns]
+        F --> H[Log Daily Snapshot]
+    end
+
+    subgraph ALPHA["Alpha Model — Every 5 Days"]
+        I[Compute Signals<br/>per Symbol] --> J{All 3 SMAs<br/>agree on<br/>direction?}
+        J -- No --> K[No Signal]
+        J -- Yes --> L["Weighted Score<br/>0.2×SMA20 + 0.5×SMA63 + 0.3×SMA252<br/>(ATR-normalised)"]
+        L --> M["tanh compression<br/>→ magnitude ∈ (-1,+1)"]
+        M --> N{|mag| ≥ 0.05?}
+        N -- No --> K
+        N -- Yes --> O[Emit Insight<br/>Up / Down]
+    end
+
+    subgraph PCM["Portfolio Construction"]
+        O --> P[Normalise Weights<br/>by Signal Magnitude]
+        P --> Q["Vol-Scale to 10%<br/>Target Volatility"]
+        Q --> R["Apply Constraints<br/>±10% per name<br/>150% gross · 50% net"]
+        R --> S{Classify Each Symbol}
+        S --> S1[NEW_ENTRY<br/>Start 5-day scale-in]
+        S --> S2[FLIP<br/>Exit → scale-in next day]
+        S --> S3[RESIZE<br/>Jump to new weight]
+        S --> S4[HOLD<br/>Inside 1.5% dead-band]
+        S --> S5[EXIT<br/>Close position]
+    end
+
+    subgraph EXEC["Execution Model"]
+        S1 & S2 & S3 & S5 --> T{Signal Strength}
+        T -- "Exit" --> U[Market Order]
+        T -- "Strong ≥ 0.70" --> V[Limit @ market]
+        T -- "Moderate ≥ 0.30" --> W[Limit 0.5% passive]
+        T -- "Weak < 0.30" --> X[Limit 1.5% passive]
+    end
+
+    subgraph SCALE["Non-Rebalance Days (1-4)"]
+        Y[Re-emit Cached Signals] --> Z[Advance Scale Day]
+        Z --> AA[Emit Partial Target<br/>per Scaling Schedule]
+    end
+
+    INIT --> DAILY
+    DAILY --> ALPHA
+    ALPHA --> PCM
+    PCM --> EXEC
+    S4 -. "No order" .-> SCALE
+    EXEC --> SCALE
+```
 
 ## Documentation
 
