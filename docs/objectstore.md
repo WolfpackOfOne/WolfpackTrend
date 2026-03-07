@@ -2,25 +2,28 @@
 
 The strategy logs daily metrics to QuantConnect's ObjectStore during backtests. All files are saved at the end of the backtest via `OnEndOfAlgorithm`. Previous run data is cleared at initialization.
 
+Keys are prefixed by `TEAM_ID` from `config.py` (default: `production`).
+
 ## Files
 
 | Key | Description | Approx Rows (2yr) |
 |-----|-------------|--------------------|
-| `wolfpack/daily_snapshots.csv` | Daily portfolio-level metrics | ~500 |
-| `wolfpack/positions.csv` | Per-symbol position snapshots | ~15,000 |
-| `wolfpack/signals.csv` | Alpha signals with indicator values | ~2,000 |
-| `wolfpack/slippage.csv` | Per-fill slippage measurement | ~8,000 |
-| `wolfpack/trades.csv` | Realized P&L from closed positions | ~4,000 |
-| `wolfpack/targets.csv` | Daily per-symbol scaling target state | ~15,000 |
-| `wolfpack/order_events.csv` | Full order lifecycle events | ~20,000 |
+| `<TEAM_ID>/daily_snapshots.csv` | Daily portfolio-level metrics | ~500 |
+| `<TEAM_ID>/positions.csv` | Per-symbol position snapshots | ~15,000 |
+| `<TEAM_ID>/signals.csv` | Alpha signals with indicator values | ~2,000 |
+| `<TEAM_ID>/slippage.csv` | Per-fill slippage measurement | ~8,000 |
+| `<TEAM_ID>/trades.csv` | Realized P&L from closed positions | ~4,000 |
+| `<TEAM_ID>/targets.csv` | Daily per-symbol scaling target state | ~15,000 |
+| `<TEAM_ID>/order_events.csv` | Full order lifecycle events | ~20,000 |
 
 ## Reading in Research Notebooks
 
 ```python
 from io import StringIO
 import pandas as pd
+from config import TEAM_ID
 
-key = "wolfpack/daily_snapshots.csv"
+key = f"{TEAM_ID}/daily_snapshots.csv"
 df = pd.read_csv(StringIO(qb.ObjectStore.Read(key)), parse_dates=['date'])
 ```
 
@@ -60,7 +63,7 @@ df = pd.read_csv(StringIO(qb.ObjectStore.Read(key)), parse_dates=['date'])
 | `daily_realized_pnl` | float | Daily realized P&L delta |
 | `daily_fees` | float | Daily fees delta |
 | `daily_dividends` | float | Daily dividends delta (informational under Adjusted pricing) |
-| `daily_total_net_pnl` | float | realized + unrealized - fees |
+| `daily_total_net_pnl` | float | Daily delta of (profit + unrealized - fees) |
 | `avg_price` | float | Average entry price |
 
 ### signals.csv
@@ -114,6 +117,8 @@ df = pd.read_csv(StringIO(qb.ObjectStore.Read(key)), parse_dates=['date'])
 | `scheduled_w` | float | Scheduled weight for today |
 | `actual_w` | float | Actual portfolio weight |
 | `scale_day` | int | Current scaling day (0-indexed) |
+| `is_scaling` | bool | Whether symbol is still in scale-in mode |
+| `classification` | string | Rebalance action label (`HOLD`, `RESIZE`, `FLIP`, `NEW_ENTRY`, `EXIT`) |
 
 ### order_events.csv
 

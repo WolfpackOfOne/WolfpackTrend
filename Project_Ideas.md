@@ -338,6 +338,30 @@ These projects require modifying or extending existing model logic. Typically in
 
 ---
 
+### M11. Replace tanh with a Different Signal Activation Function
+
+**Description:** The current signal pipeline applies `tanh(score / temperature)` to map raw composite scores into (-1, +1). As the signal distribution dashboard shows, `tanh` saturates quickly — most signals cluster near ±1 (strong tier) because even moderate raw scores push through the steep part of the curve. Replace `tanh` with an alternative activation function that produces a more balanced distribution across tiers. Options include:
+- **Sigmoid-linear hybrid:** Linear in the middle range, capped at ±1 — preserves proportionality for moderate scores while still bounding extremes
+- **Clipped linear:** `clip(score / temperature, -1, +1)` — fully proportional until saturation, no compression of moderate signals
+- **Softsign:** `score / (1 + |score|)` — similar shape to `tanh` but approaches ±1 more slowly, so fewer signals saturate
+- **Piecewise quantile:** Map raw scores to their empirical percentile rank, producing a uniform distribution across tiers by construction
+
+The goal is to spread signal mass more evenly across strong/moderate/weak tiers, giving the execution model's tiered limit logic more differentiation to work with.
+
+**Files to modify:**
+- `core/math_utils.py` — In `compute_composite_signal()`, replace the `math.tanh(score / temperature)` call with your chosen activation function. This is a single-line change for simple alternatives, or a small helper function for piecewise approaches.
+
+**Where the logic lives:** `core/math_utils.py:compute_composite_signal()` — the line `magnitude = math.tanh(score / temperature)`
+
+**Notebooks for analysis:**
+- `research/signal/signal_distribution_dashboard.ipynb` — **Primary notebook.** Compare the signal magnitude histogram before/after — you should see mass shift from the ±1 extremes toward the middle
+- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/signal/signal_profitability_stats.ipynb` — Do moderate-strength signals become more common and are they profitable?
+- `research/trading/limit_spread_vs_fill.ipynb` — With more moderate/weak signals, do the tiered limit offsets actually get used more?
+- `research/signal/signal_tier_execution_quality.ipynb` — Execution quality by tier should show more activity in moderate/weak tiers
+
+---
+
 ## Hard (Architectural & Research-Intensive Changes)
 
 These projects require adding new models, significant research, or architectural changes across multiple files.

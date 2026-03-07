@@ -4,16 +4,17 @@ This file defines repository-specific instructions for coding agents working in 
 
 ## Project Summary
 - Strategy: modular trend-following equity strategy built on LEAN.
-- Universe: static ticker list in `models/universe.py` (`EQUITY_UNIVERSE`, currently 30 names).
+- Universe: static ticker list in `shared/universe.py` (`EQUITY_UNIVERSE`, currently 30 names), re-exported via `models/universe.py`.
 - Entrypoint: `main.py` (`WolfpackTrendAlgorithm`).
 - Lean engine path: `$HOME/Documents/QuantConnect/Lean/Algorithm`.
 
 ## Architecture
 - `main.py`: algorithm setup, model wiring, scheduled stale-order cancellation, event logging.
-- `models/alpha.py`: `CompositeTrendAlphaModel` (20/63/252 SMA composite trend, ATR normalization).
-- `models/portfolio.py`: `TargetVolPortfolioConstructionModel` (10% vol targeting, constraints, 5-day scaling).
-- `models/execution.py`: `SignalStrengthExecutionModel` (signal-tiered limit logic + stale cancellation).
-- `models/logger.py`: `PortfolioLogger` writing CSV data to ObjectStore.
+- `signals/alpha.py`: `CompositeTrendAlphaModel` (20/63/252 SMA composite trend, ATR normalization).
+- `risk/portfolio.py`: `TargetVolPortfolioConstructionModel` (10% vol targeting, constraints, 5-day scaling).
+- `execution/execution.py`: `SignalStrengthExecutionModel` (signal-tiered limit logic + stale cancellation).
+- `loggers/portfolio_logger.py`: `PortfolioLogger` writing CSV data to ObjectStore.
+- `models/*.py`: compatibility adapters that re-export domain modules for framework-facing imports.
 
 ## Strategy Invariants
 - Signal model uses 3 horizons (20/63/252 SMA) with ATR normalization and `tanh(score / 3.0)`.
@@ -40,13 +41,13 @@ This file defines repository-specific instructions for coding agents working in 
 
 ## ObjectStore Outputs
 Keep these keys stable unless a migration is explicitly requested:
-- `wolfpack/daily_snapshots.csv`
-- `wolfpack/positions.csv`
-- `wolfpack/signals.csv`
-- `wolfpack/slippage.csv`
-- `wolfpack/trades.csv`
-- `wolfpack/targets.csv`
-- `wolfpack/order_events.csv`
+- `<TEAM_ID>/daily_snapshots.csv`
+- `<TEAM_ID>/positions.csv`
+- `<TEAM_ID>/signals.csv`
+- `<TEAM_ID>/slippage.csv`
+- `<TEAM_ID>/trades.csv`
+- `<TEAM_ID>/targets.csv`
+- `<TEAM_ID>/order_events.csv`
 
 ## Development Workflow
 Use QuantConnect cloud for authoritative backtests.
@@ -69,7 +70,10 @@ lean cloud pull --project "<qc-project-name>"
 For code changes, run lightweight local validation before handing off:
 
 ```bash
-python -m py_compile main.py models/*.py
+python -m py_compile main.py
+for f in models/*.py core/*.py signals/*.py risk/*.py execution/*.py loggers/*.py shared/*.py templates/*.py; do
+    python -m py_compile "$f"
+done
 ```
 
 Then provide a cloud backtest command (or run one if requested).
@@ -83,5 +87,5 @@ Then provide a cloud backtest command (or run one if requested).
 ## Scope Guidance For Agents
 - Preserve modular separation between alpha, portfolio construction, execution, and logging.
 - Avoid changing core parameters, universe membership, or ObjectStore schema unless explicitly asked.
-- When modifying execution/scaling logic, check downstream effects in both `models/portfolio.py` and `models/execution.py`.
+- When modifying execution/scaling logic, check downstream effects in both `risk/portfolio.py` and `execution/execution.py` (and keep `models/` adapters consistent).
 - Keep research notebooks/docs aligned if behavior or output columns change.

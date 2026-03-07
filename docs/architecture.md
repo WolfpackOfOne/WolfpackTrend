@@ -38,11 +38,14 @@ WolfpackTrend uses a layered architecture built on QuantConnect's LEAN framework
 ├── main.py                     # Algorithm entrypoint (QCAlgorithm subclass)
 ├── models/                     # Compatibility adapters (thin re-exports)
 │   ├── __init__.py             # Exports: EQUITY_UNIVERSE, all model classes
-│   ├── universe.py             # EQUITY_UNIVERSE ticker list (source of truth)
+│   ├── universe.py             # Re-exports EQUITY_UNIVERSE from shared.universe
 │   ├── alpha.py                # → signals.alpha.CompositeTrendAlphaModel
 │   ├── portfolio.py            # → risk.portfolio.TargetVolPortfolioConstructionModel
 │   ├── execution.py            # → execution.execution.SignalStrengthExecutionModel
 │   └── logger.py               # → loggers.portfolio_logger.PortfolioLogger
+├── shared/                     # Shared constants used across layers
+│   ├── __init__.py
+│   └── universe.py             # Source of truth for EQUITY_UNIVERSE
 ├── core/                       # Pure functions (no QC dependencies)
 │   ├── __init__.py             # Exports EQUITY_UNIVERSE
 │   ├── universe.py             # Re-exports EQUITY_UNIVERSE from shared.universe

@@ -4,7 +4,7 @@ WolfpackTrend is a systematic long/short trend-following strategy trading a stat
 
 ## Universe
 
-Static list of equities defined in `models/universe.py` (`EQUITY_UNIVERSE`). The universe does not rotate dynamically.
+Static list of equities defined in `shared/universe.py` (`EQUITY_UNIVERSE`), re-exported through `models/universe.py` for compatibility. The universe does not rotate dynamically.
 
 ## Signal Generation (Alpha Model)
 
