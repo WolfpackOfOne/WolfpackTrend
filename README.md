@@ -182,7 +182,7 @@ flowchart TD
         J -- No --> K[No Signal]
         J -- Yes --> L["Weighted Score<br/>0.2×SMA20 + 0.5×SMA63 + 0.3×SMA252<br/>(ATR-normalised)"]
         L --> M["tanh compression<br/>→ magnitude ∈ (-1,+1)"]
-        M --> N{|mag| ≥ 0.05?}
+        M --> N{"mag ≥ 0.05?"}
         N -- No --> K
         N -- Yes --> O[Emit Insight<br/>Up / Down]
     end
