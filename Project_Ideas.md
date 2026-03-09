@@ -124,22 +124,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 
 ---
 
-### E8. Change the Backtest Window
-
-**Description:** The baseline backtest runs from 2022-01-01 to 2024-01-01, covering a rising-rate, mixed-trend environment. Running the same strategy over different market regimes tests robustness. Try the COVID crash (2019-2021), the post-COVID rally (2020-2022), a low-volatility period (2016-2018), or a full decade (2015-2025). The hypothesis is that trend-following performs best in trending markets and worst in choppy, range-bound periods.
-
-**Files to modify:**
-- `main.py` — Change `self.SetStartDate()` and `self.SetEndDate()` in `Initialize()`
-
-**Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison across regimes
-- `research/risk/risk_metrics.ipynb` — Drawdown behavior in different regimes
-- `research/signal/signal_direction_persistence.ipynb` — Do signals persist longer in trending vs. choppy markets?
-- `research/exposure/03_exposure_regime_dashboard.ipynb` — How does exposure adapt to different regimes?
-
----
-
-### E9. Switch the SMA Periods
+### E8. Switch the SMA Periods
 
 **Description:** The alpha model uses 20/63/252-day SMAs corresponding roughly to 1-month, 3-month, and 1-year trends. Faster periods (e.g., 10/30/120) detect trend changes sooner but produce more false signals. Slower periods (e.g., 50/100/300) are more reliable but enter/exit later. This tests which combination of lookback windows best captures tradeable trends in the DOW 30.
 
@@ -156,7 +141,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 
 ---
 
-### E10. Raise the Minimum Signal Threshold
+### E9. Raise the Minimum Signal Threshold
 
 **Description:** Signals with magnitude below `ALPHA_MIN_MAGNITUDE` (currently 0.05) are discarded. Raising this threshold (e.g., 0.15, 0.25, or 0.40) filters out weak, low-conviction signals, meaning the strategy only trades when the trend is strong. This reduces the number of active positions and concentrates capital in high-conviction names. The tradeoff is missing genuine early-stage trends that start weak and strengthen.
 
@@ -405,7 +390,7 @@ These projects require adding new models, significant research, or architectural
 
 ### H3. Implement a Risk Parity Portfolio Construction Model
 
-**Description:** Replace the current target-volatility sizing with a risk parity approach where each position contributes equally to total portfolio risk. In the current model, positions are sized by signal strength and then scaled to a vol target. In risk parity, the weight of each position is determined so that its marginal contribution to portfolio variance equals 1/N of total variance. This requires computing the covariance matrix of returns and iteratively solving for weights (e.g., using the Maillard-Roncalli-Teiletche algorithm). This is one of the most well-known portfolio construction techniques in institutional finance.
+**Description:** Replace the current target-volatility sizing with a risk parity approach where each position contributes equally to total portfolio risk. In the current model, positions are sized by signal strength and then scaled to a vol target. In risk parity, the weight of each position is determined so that its marginal contribution to portfolio variance equals 1/N of total variance. This requires computing the covariance matrix of returns and iteratively solving for weights. This is one of the most well-known portfolio construction techniques in institutional finance.
 
 **Files to modify/create:**
 - `risk/portfolio.py` — Replace or supplement `TargetVolPortfolioConstructionModel` with a new `RiskParityPortfolioConstructionModel` class
@@ -440,7 +425,7 @@ These projects require adding new models, significant research, or architectural
 
 ### H5. Build a Dynamic Universe Selection Model
 
-**Description:** Replace the static 30-stock universe with a dynamic universe that selects stocks from a larger pool (e.g., S&P 500 constituents) based on a screening criterion refreshed monthly. Possible screens: top 30 by 12-month momentum, top 30 by average daily volume, top 30 by trend signal strength, or a sector-balanced selection. This requires implementing QuantConnect's `UniverseSelectionModel` interface, which controls which securities the algorithm trades. The challenge is handling securities being added/removed from the universe mid-backtest.
+**Description:** Replace the static 30-stock universe with a dynamic universe that selects stocks from a larger pool (e.g., S&P 500 constituents) based on a screening criterion refreshed weekly/monthly. Possible screens: top 30 by 12-month momentum, top 30 by average daily volume, top 30 by trend signal strength, or a sector-balanced selection. This requires implementing QuantConnect's `UniverseSelectionModel` interface, which controls which securities the algorithm trades. The challenge is handling securities being added/removed from the universe mid-backtest.
 
 **Files to modify/create:**
 - Create a new file (e.g., `signals/universe.py`) implementing `FundamentalUniverseSelectionModel` or `ManualUniverseSelectionModel`
@@ -455,27 +440,9 @@ These projects require adding new models, significant research, or architectural
 
 ---
 
-### H6. Implement a Pairs/Relative-Value Overlay
+### H6. Add Transaction Cost Modeling and Optimization
 
-**Description:** Instead of trading absolute trends, identify pairs of correlated stocks and trade the spread between them. Compute rolling correlations to find pairs (e.g., KO/PG, JPM/GS). For each pair, calculate the z-score of the price spread. When the spread widens beyond a threshold (e.g., z > 2), go long the underperformer and short the outperformer. This is a fundamentally different signal source (mean-reversion of relative value) that can be combined with or replace the existing trend signals.
-
-**Files to modify/create:**
-- Create a new alpha model (e.g., `signals/pairs_alpha.py`) that identifies pairs, computes spread z-scores, and emits pair-based insights
-- `core/math_utils.py` — Add pure functions for rolling correlation, spread z-score computation
-- `main.py` — Wire the new alpha model (either replacing or combining with the trend alpha)
-- `models/__init__.py` — Export the new model
-
-**Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
-- `research/risk/correlation_risk.ipynb` — Identify candidate pairs from the correlation matrix
-- `research/signal/signal_distribution_dashboard.ipynb` — Spread z-score signal distributions
-- `research/risk/beta_vs_spy.ipynb` — Pairs trading should be more market-neutral (lower beta)
-
----
-
-### H7. Add Transaction Cost Modeling and Optimization
-
-**Description:** The baseline strategy uses zero commissions and doesn't model bid-ask spread or market impact. Add realistic cost estimates: commissions (e.g., $0.005/share), half-spread (e.g., 2-5 bps for large-cap), and market impact (proportional to order size / ADV). Then modify the rebalance logic to only trade when expected alpha (signal magnitude) exceeds estimated round-trip cost. This creates a cost-aware dead-band that dynamically adjusts by stock and market conditions. The challenge is accurately estimating costs and integrating them into the decision logic.
+**Description:** The baseline strategy uses zero commissions and doesn't model bid-ask spread or market impact. Add realistic cost estimates: commissions (e.g., $0.005/share), half-spread (e.g., 2-5 bps for large-cap), and market impact (proportional to order size / ADV). Then modify the rebalance logic to only trade when the signal magnitude (used as a proxy for expected return — stronger trend signal implies more edge) exceeds the estimated round-trip cost. This is a dynamic, per-stock version of the existing `ALPHA_MIN_MAGNITUDE` filter: instead of a fixed threshold, trades are suppressed when the cost of executing them likely outweighs the conviction behind the signal. The challenge is accurately estimating costs and integrating them into the decision logic.
 
 **Files to modify:**
 - `main.py` — Set realistic commissions using `self.SetSecurityInitializer()` or per-security fee models
@@ -490,7 +457,7 @@ These projects require adding new models, significant research, or architectural
 
 ---
 
-### H8. Implement Cross-Sectional Momentum (Long-Short)
+### H7. Implement Cross-Sectional Momentum (Long-Short)
 
 **Description:** Replace the absolute trend alpha (is the stock above its SMA?) with a cross-sectional momentum alpha (is the stock outperforming its peers?). Rank all universe stocks by 12-month return minus 1-month return (the "12-1 momentum" factor from academic literature). Go long the top quintile (top 6 stocks) and short the bottom quintile. This is a well-documented anomaly in academic finance. The key difference from the current strategy is that signals are relative (rank-based) rather than absolute (price vs. SMA).
 
@@ -508,7 +475,7 @@ These projects require adding new models, significant research, or architectural
 
 ---
 
-### H9. Apply Machine Learning to Position Sizing
+### H8. Apply Machine Learning to Position Sizing
 
 **Description:** Train a simple ML model to predict optimal position sizes using features available at signal time: signal magnitude, rolling volatility, recent return, volume ratio, ATR, and correlation with SPY. Use the QuantConnect research environment to train on historical data (from ObjectStore CSVs), then deploy the trained model in the algorithm. The model could predict expected return or expected Sharpe contribution per position, which then drives sizing. This is the most research-intensive project and requires comfort with scikit-learn or similar libraries.
 
@@ -526,7 +493,7 @@ These projects require adding new models, significant research, or architectural
 
 ---
 
-### H10. Build an Ensemble of Alpha Models
+### H9. Build an Ensemble of Alpha Models
 
 **Description:** Run multiple alpha models simultaneously and combine their signals. For example: (1) the existing trend model, (2) a mean-reversion model using RSI, and (3) a volume-breakout model. Each model emits independent insights. A custom portfolio construction model (or an insight combiner) merges the signals using a weighting scheme: equal weight, inverse-volatility weighted, or weights learned from historical performance. This tests whether signal diversification improves risk-adjusted returns, similar to how a fund-of-funds diversifies across strategies.
 
