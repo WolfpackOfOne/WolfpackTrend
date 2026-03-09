@@ -1,5 +1,18 @@
 # WolfpackTrend Project Assignment
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Project Selection](#project-selection)
+- [Milestone 1: Project Proposal (Week 2)](#milestone-1-project-proposal-week-2--1-2-minutes)
+- [Milestone 2: Final Presentation](#milestone-2-final-presentation-5-10-minutes)
+  - [Backtest Requirements](#backtest-requirements)
+- [Deliverables](#deliverables)
+- [Presentation Format](#presentation-format-5-10-minutes)
+- [Evaluation Criteria](#evaluation-criteria)
+
+---
+
 ## Overview
 
 In teams of 2-3, you will select one project from the [Project Ideas list](Project_Ideas.md), modify the WolfpackTrend codebase, run backtests across four different market environments, and deliver a 5-10 minute team presentation explaining your changes and findings.
