@@ -1,6 +1,47 @@
 # WolfpackTrend Project Ideas
 
-30 project ideas for modifying the WolfpackTrend algorithm. Each project starts from the existing codebase and requires a single focused change. Present your backtest results (Sharpe, Sortino, Calmar, drawdown, total return) versus the baseline and explain **why** the change helped or hurt.
+28 project ideas for modifying the WolfpackTrend algorithm. Each project starts from the existing codebase and requires a single focused change. Present your backtest results (Sharpe, Sortino, Calmar, drawdown, total return) versus the baseline and explain **why** the change helped or hurt.
+
+## Table of Contents
+
+### Easy (Parameter & Universe Changes)
+- [E1. Change the Stock Universe](#e1-change-the-stock-universe)
+- [E2. Tune the SMA Signal Weights](#e2-tune-the-sma-signal-weights)
+- [E3. Adjust Signal Temperature](#e3-adjust-signal-temperature)
+- [E4. Modify Target Volatility](#e4-modify-target-volatility)
+- [E5. Change the Rebalance Frequency](#e5-change-the-rebalance-frequency)
+- [E6. Adjust Exposure Caps](#e6-adjust-exposure-caps)
+- [E7. Modify the Dead-Band Tolerance](#e7-modify-the-dead-band-tolerance)
+- [E8. Switch the SMA Periods](#e8-switch-the-sma-periods)
+- [E9. Raise the Minimum Signal Threshold](#e9-raise-the-minimum-signal-threshold)
+
+### Medium (Logic & Model Changes)
+- [M1. Add a Volume Filter to the Alpha Model](#m1-add-a-volume-filter-to-the-alpha-model)
+- [M2. Implement ATR-Based Position Sizing](#m2-implement-atr-based-position-sizing)
+- [M3. Add a Momentum Ranking Filter](#m3-add-a-momentum-ranking-filter)
+- [M4. Implement Asymmetric Scaling Schedules](#m4-implement-asymmetric-scaling-schedules)
+- [M5. Add a Drawdown Circuit Breaker](#m5-add-a-drawdown-circuit-breaker)
+- [M6. Replace SMA with EMA Indicators](#m6-replace-sma-with-ema-indicators)
+- [M7. Add a Regime Filter Using a Market Index](#m7-add-a-regime-filter-using-a-market-index)
+- [M8. Implement Dynamic Rebalance Frequency](#m8-implement-dynamic-rebalance-frequency)
+- [M9. Improve Volatility Scaling Accuracy (Correlation-Aware Position Sizing)](#m9-improve-volatility-scaling-accuracy-correlation-aware-position-sizing)
+- [M10. Change the Execution Model to Use Market Orders](#m10-change-the-execution-model-to-use-market-orders)
+- [M11. Replace tanh with a Different Signal Activation Function](#m11-replace-tanh-with-a-different-signal-activation-function)
+
+### Hard (Architectural & Research-Intensive Changes)
+- [H1. Implement a Multi-Factor Alpha Model](#h1-implement-a-multi-factor-alpha-model)
+- [H2. Build an Adaptive Signal Temperature](#h2-build-an-adaptive-signal-temperature)
+- [H3. Implement a Risk Parity Portfolio Construction Model](#h3-implement-a-risk-parity-portfolio-construction-model)
+- [H4. Add a Stop-Loss and Trailing-Stop System](#h4-add-a-stop-loss-and-trailing-stop-system)
+- [H5. Build a Dynamic Universe Selection Model](#h5-build-a-dynamic-universe-selection-model)
+- [H6. Add Transaction Cost Modeling and Optimization](#h6-add-transaction-cost-modeling-and-optimization)
+- [H7. Implement Cross-Sectional Momentum (Long-Short)](#h7-implement-cross-sectional-momentum-long-short)
+- [H8. Apply Machine Learning to Position Sizing](#h8-apply-machine-learning-to-position-sizing)
+- [H9. Build an Ensemble of Alpha Models](#h9-build-an-ensemble-of-alpha-models)
+
+### Reference
+- [Presentation Guidelines](#presentation-guidelines)
+- [Relevant Research Notebooks](#relevant-research-notebooks)
 
 ---
 
