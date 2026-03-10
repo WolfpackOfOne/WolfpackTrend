@@ -59,7 +59,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 - `shared/universe.py` — Replace the `EQUITY_UNIVERSE` list with your chosen tickers
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Compare overall performance metrics (Sharpe, Sortino, Calmar, drawdown)
+- `research/TearSheet.ipynb` — Compare overall performance metrics (Sharpe, Sortino, Calmar, drawdown)
 - `research/signal/signal_distribution_dashboard.ipynb` — See how signal magnitude distributions differ across your new universe
 - `research/universe_selection/01_signal_evolution_by_equity.ipynb` — Visualize per-stock signal behavior over time
 
@@ -73,7 +73,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 - `config.py` — Change `ALPHA_SIGNAL_WEIGHTS` tuple (recommended to sum to 1.0 for comparability; current code enforces length=3, not sum)
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_profitability_stats.ipynb` — Does the hit rate change with different weight profiles?
 - `research/trading/rebalance_week_health.ipynb` — How does turnover change?
 
@@ -89,7 +89,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 **Where the logic lives:** `core/math_utils.py` — `compute_composite_signal()` function applies `tanh(score / temperature)`
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_distribution_dashboard.ipynb` — Visualize how signal distributions compress or expand
 - `research/exposure/02_portfolio_vol_vs_target.ipynb` — Does realized vol track the target differently?
 
@@ -105,7 +105,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 **Where the logic lives:** `risk/portfolio.py` — `CreateTargets()` scales weights by `target_vol / estimated_vol`
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison across vol targets
+- `research/TearSheet.ipynb` — Performance comparison across vol targets
 - `research/exposure/02_portfolio_vol_vs_target.ipynb` — Does realized vol actually hit the target?
 - `research/exposure/04_exposure_split_plots.ipynb` — How does gross/net exposure change?
 - `research/risk/portfolio_volatility.ipynb` — Rolling realized vol vs. target
@@ -124,7 +124,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 - `risk/portfolio.py` — `CreateTargets()` uses `self.rebalance_interval_trading_days` for its own rebalance counter
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/trading/rebalance_week_health.ipynb` — Fill rates per rebalance cycle
 - `research/trading/scaling_adherence.ipynb` — Does scaling still work with longer/shorter cycles?
 - `research/slippage_analysis.ipynb` — Does slippage change with frequency?
@@ -141,7 +141,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 **Where the logic lives:** `core/math_utils.py` — `apply_per_name_cap()`, `apply_gross_cap()`, `apply_net_cap()` functions
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/exposure/01_concentration_risk.ipynb` — Herfindahl index and top-N concentration
 - `research/exposure/03_exposure_regime_dashboard.ipynb` — Gross/net exposure over time
 - `research/exposure/04_exposure_split_plots.ipynb` — Long vs. short exposure breakdown
@@ -158,7 +158,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 **Where the logic lives:** `risk/portfolio.py` — `_classify_symbols()` uses `dead_band` (`self.rebalance_dead_band`) to determine HOLD vs. RESIZE
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/trading/rebalance_week_health.ipynb` — How many symbols trade per rebalance?
 - `research/position_monitor.ipynb` — Position weight drift over time
 - `research/slippage_analysis.ipynb` — Total slippage cost vs. dead-band setting
@@ -175,7 +175,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 **Where the logic lives:** `signals/alpha.py` — `_track_symbol()` registers the three horizon indicators via `algorithm.SMA(...)`
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_profitability_stats.ipynb` — Hit rate with different SMA speeds
 - `research/signal/signal_what_and_why.ipynb` — Inspect individual signal decisions
 - `research/trading/stale_signal_risk.ipynb` — Do slower SMAs produce staler signals?
@@ -192,7 +192,7 @@ These projects modify existing parameters or swap data inputs. No new classes or
 **Where the logic lives:** `core/math_utils.py` — `compute_composite_signal()` returns `None` when `abs(magnitude) < min_magnitude`
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_distribution_dashboard.ipynb` — How many signals get filtered at different thresholds?
 - `research/signal/signal_profitability_stats.ipynb` — Are weak signals unprofitable? Does filtering them help?
 - `research/position_monitor.ipynb` — How many positions are held at any time?
@@ -213,7 +213,7 @@ These projects require modifying or extending existing model logic. Typically in
 - `signals/alpha.py` — Add volume indicators in `_track_symbol()`, add volume check in `_compute_signals()` before emitting
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_profitability_stats.ipynb` — Do volume-confirmed signals have higher hit rates?
 - `research/signal/signal_distribution_dashboard.ipynb` — How many signals does the volume filter remove?
 - `research/trading/volume_decomposition_by_signal_and_trade_type.ipynb` — Volume patterns around signal generation
@@ -231,7 +231,7 @@ These projects require modifying or extending existing model logic. Typically in
 **Where the existing ATR lives:** `signals/alpha.py` — `self.atr[symbol]` stores the `AverageTrueRange(atr_period)` indicator
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/risk/portfolio_volatility.ipynb` — Does ATR-based sizing produce more stable realized vol?
 - `research/exposure/01_concentration_risk.ipynb` — Does ATR sizing change concentration?
 - `research/position_monitor.ipynb` — Compare position size distributions
@@ -247,7 +247,7 @@ These projects require modifying or extending existing model logic. Typically in
 - `main.py` — Pass `max_positions` parameter to the alpha model
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_profitability_stats.ipynb` — Are top-ranked signals more profitable?
 - `research/exposure/01_concentration_risk.ipynb` — How concentrated does the portfolio become?
 - `research/position_monitor.ipynb` — Number of active positions over time
@@ -263,7 +263,7 @@ These projects require modifying or extending existing model logic. Typically in
 - `core/math_utils.py` — Optionally add a separate `build_scaling_schedule()` call for exit schedules
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/trading/scaling_adherence.ipynb` — Verify asymmetric scaling is working
 - `research/risk/risk_metrics.ipynb` — Does faster exit reduce drawdown?
 - `research/slippage_analysis.ipynb` — Does entry/exit asymmetry affect fill quality?
@@ -279,7 +279,7 @@ These projects require modifying or extending existing model logic. Typically in
 - `risk/portfolio.py` — In `CreateTargets()`, multiply all weights by the drawdown multiplier before applying constraints
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison (especially max drawdown and Calmar ratio)
+- `research/TearSheet.ipynb` — Performance comparison (especially max drawdown and Calmar ratio)
 - `research/risk/risk_metrics.ipynb` — Drawdown depth and duration with vs. without circuit breaker
 - `research/timeseries_plotter.ipynb` — Overlay NAV curves with circuit breaker activation periods
 - `research/exposure/03_exposure_regime_dashboard.ipynb` — Gross exposure drops during circuit breaker activation
@@ -294,7 +294,7 @@ These projects require modifying or extending existing model logic. Typically in
 - `signals/alpha.py` — In `_track_symbol()`, replace `algorithm.SMA(...)` with `algorithm.EMA(...)` for each horizon (or wire `ExponentialMovingAverage` indicators manually). The rest of the signal computation logic stays the same.
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_direction_persistence.ipynb` — Do EMA signals flip direction more often?
 - `research/signal/signal_profitability_stats.ipynb` — Hit rate comparison
 - `research/signal/signal_what_and_why.ipynb` — Inspect specific signal timing differences
@@ -310,7 +310,7 @@ These projects require modifying or extending existing model logic. Typically in
 - `main.py` — Add SPY to the universe (if not already present) and ensure it's passed to the alpha model
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_distribution_dashboard.ipynb` — How many signals does the regime filter suppress?
 - `research/exposure/03_exposure_regime_dashboard.ipynb` — Gross/net exposure should shift with regime
 - `research/risk/beta_vs_spy.ipynb` — Does regime filtering reduce market beta?
@@ -326,7 +326,7 @@ These projects require modifying or extending existing model logic. Typically in
 - `main.py` — Add a `signal_change_threshold` parameter
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/trading/rebalance_week_health.ipynb` — How often does the strategy actually rebalance?
 - `research/signal/signal_direction_persistence.ipynb` — Does dynamic rebalancing catch direction changes faster?
 - `research/slippage_analysis.ipynb` — Does event-driven rebalancing reduce or increase total trading costs?
@@ -342,7 +342,7 @@ These projects require modifying or extending existing model logic. Typically in
 - `risk/portfolio.py` — (optional but recommended) expose/tune `vol_lookback` and `min_obs` used by `_estimate_portfolio_vol()` so students can calibrate tracking accuracy
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/risk/portfolio_volatility.ipynb` — Does realized vol track the target better with full covariance?
 - `research/risk/correlation_risk.ipynb` — Visualize the correlation structure being used
 - `research/exposure/02_portfolio_vol_vs_target.ipynb` — Estimated vs. realized volatility comparison
@@ -357,7 +357,7 @@ These projects require modifying or extending existing model logic. Typically in
 - `execution/execution.py` — In `Execute()`, replace the tiered limit order logic with simple `MarketOrder()` calls for all targets. Remove the stale order cancellation logic since market orders fill immediately.
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/slippage_analysis.ipynb` — Compare slippage: limit fills vs. market fills
 - `research/trading/limit_spread_vs_fill.ipynb` — Baseline limit order fill quality (for comparison)
 - `research/trading/order_lifecycle.ipynb` — Order lifecycle should be much simpler with market orders
@@ -381,7 +381,7 @@ The goal is to spread signal mass more evenly across strong/moderate/weak tiers,
 
 **Notebooks for analysis:**
 - `research/signal/signal_distribution_dashboard.ipynb` — **Primary notebook.** Compare the signal magnitude histogram before/after — you should see mass shift from the ±1 extremes toward the middle
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_profitability_stats.ipynb` — Do moderate-strength signals become more common and are they profitable?
 - `research/trading/limit_spread_vs_fill.ipynb` — With more moderate/weak signals, do the tiered limit offsets actually get used more?
 - `research/signal/signal_tier_execution_quality.ipynb` — Execution quality by tier should show more activity in moderate/weak tiers
@@ -405,7 +405,7 @@ These projects require adding new models, significant research, or architectural
 - `models/__init__.py` — Export the new model
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_profitability_stats.ipynb` — Compare hit rates of trend-only vs. multi-factor signals
 - `research/signal/signal_distribution_dashboard.ipynb` — How does the signal distribution change with multiple factors?
 - `research/risk/portfolio_volatility.ipynb` — Does factor diversification reduce portfolio volatility?
@@ -422,7 +422,7 @@ These projects require adding new models, significant research, or architectural
 - `main.py` — Add SPY if needed, remove the static temperature parameter
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_distribution_dashboard.ipynb` — Do signals become more stable across regimes?
 - `research/exposure/02_portfolio_vol_vs_target.ipynb` — Does adaptive temperature help realized vol track the target?
 - `research/risk/portfolio_volatility.ipynb` — Rolling vol analysis
@@ -440,7 +440,7 @@ These projects require adding new models, significant research, or architectural
 - `models/__init__.py` — Export the new model
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/risk/portfolio_volatility.ipynb` — Is portfolio vol more stable under risk parity?
 - `research/risk/correlation_risk.ipynb` — Understand the correlation structure driving weight allocation
 - `research/exposure/01_concentration_risk.ipynb` — Risk parity should produce more balanced concentration
@@ -457,7 +457,7 @@ These projects require adding new models, significant research, or architectural
 - `execution/execution.py` — Stop-triggered exits should use market orders for immediate execution
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison (especially max drawdown and Calmar)
+- `research/TearSheet.ipynb` — Performance comparison (especially max drawdown and Calmar)
 - `research/risk/risk_metrics.ipynb` — Drawdown depth and duration with stops
 - `research/signal/signal_profitability_stats.ipynb` — Do stops cut losing trades sooner?
 - `research/position_monitor.ipynb` — Track stop activations and early exits
@@ -474,7 +474,7 @@ These projects require adding new models, significant research, or architectural
 - `signals/alpha.py` — Handle symbols entering and leaving the universe gracefully (indicator warmup, signal cache cleanup)
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/universe_selection/02_weekly_selection_diagnostics.ipynb` — Universe turnover diagnostics
 - `research/universe_selection/03_symbol_stickiness_and_why.ipynb` — How often do stocks rotate in/out?
 - `research/universe_selection/01_signal_evolution_by_equity.ipynb` — Per-stock signal behavior for dynamically selected stocks
@@ -491,7 +491,7 @@ These projects require adding new models, significant research, or architectural
 - `core/math_utils.py` — Add a `compute_estimated_cost()` function
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison (net of costs)
+- `research/TearSheet.ipynb` — Performance comparison (net of costs)
 - `research/slippage_analysis.ipynb` — Compare realized execution costs
 - `research/trading/rebalance_week_health.ipynb` — How many trades does cost-awareness eliminate?
 - `research/trading/order_lifecycle.ipynb` — Order count and fill quality
@@ -509,7 +509,7 @@ These projects require adding new models, significant research, or architectural
 - `core/math_utils.py` — Add a `compute_cross_sectional_momentum()` function
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_distribution_dashboard.ipynb` — Momentum score distributions
 - `research/signal/signal_profitability_stats.ipynb` — Is top-quintile momentum profitable?
 - `research/risk/beta_vs_spy.ipynb` — Long-short momentum should have lower market beta
@@ -528,7 +528,7 @@ These projects require adding new models, significant research, or architectural
 
 **Notebooks for analysis:**
 - `research/ml_position_sizing.ipynb` — (new; create this notebook first) Model training, feature importance, cross-validation
-- `research/TearSheet_CC.ipynb` — Performance comparison
+- `research/TearSheet.ipynb` — Performance comparison
 - `research/signal/signal_profitability_stats.ipynb` — Does ML sizing improve per-signal profitability?
 - `research/risk/portfolio_volatility.ipynb` — Does ML sizing produce more stable risk?
 
@@ -546,7 +546,7 @@ These projects require adding new models, significant research, or architectural
 - `models/__init__.py` — Export new models
 
 **Notebooks for analysis:**
-- `research/TearSheet_CC.ipynb` — Performance comparison: individual models vs. ensemble
+- `research/TearSheet.ipynb` — Performance comparison: individual models vs. ensemble
 - `research/signal/signal_distribution_dashboard.ipynb` — Signal distributions per model
 - `research/signal/signal_profitability_stats.ipynb` — Hit rates per model and combined
 - `research/risk/portfolio_volatility.ipynb` — Does ensemble reduce portfolio volatility through signal diversification?
@@ -570,7 +570,7 @@ All notebooks read from ObjectStore CSVs generated by the backtest. After runnin
 
 | Category | Notebook | What It Shows |
 |----------|----------|---------------|
-| **Performance** | `research/TearSheet_CC.ipynb` | Sharpe, Sortino, Calmar, drawdown, total return |
+| **Performance** | `research/TearSheet.ipynb` | Sharpe, Sortino, Calmar, drawdown, total return |
 | **Signals** | `research/signal/signal_distribution_dashboard.ipynb` | Signal magnitude histograms and statistics |
 | **Signals** | `research/signal/signal_profitability_stats.ipynb` | Per-signal P&L attribution and hit rates |
 | **Signals** | `research/signal/signal_direction_persistence.ipynb` | How long signals persist before flipping |
