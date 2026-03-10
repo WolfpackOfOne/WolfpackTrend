@@ -90,7 +90,7 @@ df = pd.read_csv(StringIO(qb.ObjectStore.Read(key)), parse_dates=['date'])
 | `quantity` | float | Fill quantity |
 | `expected_price` | float | Price at signal generation |
 | `fill_price` | float | Actual fill price |
-| `slippage_dollars` | float | Dollar slippage (positive = adverse) |
+| `slippage_dollars` | float | Dollar slippage (positive = favorable, negative = adverse) |
 
 ### trades.csv
 

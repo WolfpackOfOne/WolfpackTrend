@@ -16,7 +16,7 @@ class SlippageLogger:
         self.last_slippage_date = None
 
     def log(self, date, symbol, direction, quantity, expected_price, fill_price):
-        slippage_dollars = (fill_price - expected_price) * quantity
+        slippage_dollars = (expected_price - fill_price) * quantity
 
         current_date = date.date()
         if self.last_slippage_date != current_date:
